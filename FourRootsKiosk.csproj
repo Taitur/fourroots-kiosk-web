@@ -6,4 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>FourRootsKiosk</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="kiosk-web/**/*.cs" />
+    <Content Remove="kiosk-web/**/*" />
+    <None Remove="kiosk-web/**/*" />
+  </ItemGroup>
 </Project>

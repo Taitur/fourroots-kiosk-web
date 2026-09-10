@@ -1,5 +1,5 @@
 @model List<ModuleModel>
-@{ ViewData["Title"] = "Dashboard"; }
+@{ ViewData["Title"] = "Dashboard"; Layout = null; }
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -46,7 +46,7 @@
             <span class="material-symbols-outlined" style="font-size:16px; color:#6B7280;">expand_more</span>
           </button>
           <div class="dropdown-panel" id="userPanel" style="width:220px;">
-            <div class="item"><span class="material-symbols-outlined" style="font-size:18px;">person</span> Mi perfil</div>
+            <a class="item" style="text-decoration:none; color:inherit;" asp-controller="Avatar" asp-action="Index"><span class="material-symbols-outlined" style="font-size:18px;">person</span> Mi perfil</a>
             <div class="item"><span class="material-symbols-outlined" style="font-size:18px;">tune</span> Preferencias</div>
             <div class="item" id="userNotifItem"><span class="material-symbols-outlined" style="font-size:18px;">notifications_active</span> Notificaciones</div>
             <div class="item"><span class="material-symbols-outlined" style="font-size:18px;">help</span> Ayuda y soporte</div>
@@ -71,23 +71,45 @@
   <div class="modules-wrap">
     @foreach (var m in Model)
     {
+      var primerUrl = m.Apps.FirstOrDefault(a => a.Url != null)?.Url;
       <div class="modulo-block">
         <div class="modulo-head">
           <div class="icon-box"><span class="material-symbols-outlined" style="font-size:21px; color:#fff;">@m.Icon</span></div>
           <div class="info"><h2>@m.Title</h2><p>@m.Description</p></div>
-          <button class="btn-abrir">Abrir módulo <span class="material-symbols-outlined" style="font-size:15px;">arrow_forward</span></button>
+          @if (primerUrl != null)
+          {
+            <a class="btn-abrir" style="text-decoration:none;" href="@primerUrl">Abrir módulo <span class="material-symbols-outlined" style="font-size:15px;">arrow_forward</span></a>
+          }
+          else
+          {
+            <button class="btn-abrir" disabled style="opacity:.5; cursor:not-allowed;">Abrir módulo <span class="material-symbols-outlined" style="font-size:15px;">arrow_forward</span></button>
+          }
         </div>
         <div class="apps-row">
           @foreach (var a in m.Apps)
           {
-            <div class="app-card">
-              <div class="icono">
-                <div class="deco1"></div>
-                <div class="deco2"></div>
-                <span class="material-symbols-outlined ico">@a.Icon</span>
+            @if (a.Url != null)
+            {
+              <a class="app-card" style="text-decoration:none; color:inherit; cursor:pointer;" href="@a.Url">
+                <div class="icono">
+                  <div class="deco1"></div>
+                  <div class="deco2"></div>
+                  <span class="material-symbols-outlined ico">@a.Icon</span>
+                </div>
+                <div class="cuerpo"><p>@a.Name</p><span>@a.Desc</span></div>
+              </a>
+            }
+            else
+            {
+              <div class="app-card" style="opacity:.55;" title="Próximamente">
+                <div class="icono">
+                  <div class="deco1"></div>
+                  <div class="deco2"></div>
+                  <span class="material-symbols-outlined ico">@a.Icon</span>
+                </div>
+                <div class="cuerpo"><p>@a.Name</p><span>@a.Desc</span></div>
               </div>
-              <div class="cuerpo"><p>@a.Name</p><span>@a.Desc</span></div>
-            </div>
+            }
           }
         </div>
       </div>

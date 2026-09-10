@@ -23,13 +23,14 @@ public class MockDataService
                 new AppModel { Id = "reclu", Name = "Reclutamiento", Desc = "Proceso de contratación", Icon = "person_add" },
                 new AppModel { Id = "evaluaciones", Name = "Evaluaciones", Desc = "Desempeño y objetivos", Icon = "insights" },
                 new AppModel { Id = "capacitacion", Name = "Capacitación", Desc = "Cursos y certificaciones", Icon = "school" },
+                new AppModel { Id = "engage", Name = "Engage", Desc = "Comunidad y reconocimientos", Icon = "diversity_3", Url = "/Engage/Index" },
             }
         },
         new ModuleModel {
             Id = "tiempo", Title = "Tiempo y Accesos", Description = "Asistencia y control de acceso",
             Icon = "schedule", Gradient = "linear-gradient(135deg,#F59E0B,#EA580C)",
             Apps = new() {
-                new AppModel { Id = "asist", Name = "Asistencia", Desc = "Registro y seguimiento", Icon = "fact_check" },
+                new AppModel { Id = "asist", Name = "Asistencia", Desc = "Registro y seguimiento", Icon = "fact_check", Url = "/Attendance/Index" },
                 new AppModel { Id = "horar", Name = "Horarios", Desc = "Turnos y calendarios", Icon = "calendar_month" },
                 new AppModel { Id = "vacaciones", Name = "Vacaciones", Desc = "Solicitudes y saldo", Icon = "beach_access", Url = "/Vacations/Index" },
             }

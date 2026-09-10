@@ -14,6 +14,8 @@ public class AppModel
     public string Name { get; set; } = "";
     public string Desc { get; set; } = "";
     public string Icon { get; set; } = "";
+    // Ruta relativa del módulo ya implementado (ej. "/Attendance"); null si aún no existe.
+    public string? Url { get; set; }
 }
 
 public class ModuleModel

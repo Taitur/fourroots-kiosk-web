@@ -3,6 +3,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<FourRootsKiosk.Services.MockDataService>();
+builder.Services.AddScoped<FourRootsKiosk.Services.IAttendanceService, FourRootsKiosk.Services.AttendanceService>();
+builder.Services.AddScoped<FourRootsKiosk.Services.IAvatarService, FourRootsKiosk.Services.AvatarService>();
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromHours(2);
