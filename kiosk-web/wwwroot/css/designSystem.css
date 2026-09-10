@@ -1,0 +1,1258 @@
+/* ==========================================================================
+   DESIGN SYSTEM - Eslabón Cloud Kiosk
+   Ported from the "Comunidad" and "Portal Empresarial" prototypes.
+   All new component classes are prefixed with "ks-" to avoid colliding
+   with Bootstrap's own .modal, .toast, .badge, .nav-item, .tab and .card
+   classes, which are already used elsewhere in this project.
+   Color variables live in :root so each client company can override them
+   (whitelabel) without touching the rest of the CSS.
+   ========================================================================== */
+
+:root {
+  /* dark surfaces (header, sidebar active state, manager view, dark cards) */
+  --navy: #0B0F1F;
+  --navy-2: #131A33;
+  --navy-3: #1C2444;
+  --line: #232B4A;
+
+  /* light surfaces */
+  --paper: #F6F7FB;
+  --card: #FFFFFF;
+  --border: #E7E9F2;
+  --border-soft: #F1F2F7;
+
+  /* text */
+  --ink: #12142B;
+  --ink-dim: #6B7089;
+  --ink-faint: #9AA0BD;
+
+  /* brand accent (customizable per company) */
+  --accent: #6C5CE7;
+  --accent-dark: #4B3FC4;
+  --accent-soft: #EFEDFD;
+
+  /* secondary accent, used for kudos/likes */
+  --accent2: #FF6B6B;
+  --accent2-soft: #FFEBEB;
+
+  /* success / wellness */
+  --good: #1FA97A;
+  --good-soft: #E4F6EF;
+
+  --radius: 14px;
+}
+
+/* optional theme presets: set data-theme="mint|sunset|ocean" on <body> or
+   any container to re-skin the accent colors for a client company */
+[data-theme="mint"]   { --accent: #0E9E8E; --accent-dark: #0B7A6E; --accent-soft: #E3F7F4; --accent2: #F5A524; --accent2-soft: #FDF1DC; }
+[data-theme="sunset"] { --accent: #F0653C; --accent-dark: #C24A26; --accent-soft: #FDEBE4; --accent2: #6C5CE7; --accent2-soft: #EFEDFD; }
+[data-theme="ocean"]  { --accent: #2F7BF0; --accent-dark: #1E5AC2; --accent-soft: #E7F0FE; --accent2: #F0B93C; --accent2-soft: #FDF3DC; }
+
+/* ==========================================================================
+   BASE
+   ========================================================================== */
+
+/* base font size 14px on mobile, 16px on wider screens */
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+/* min-height: 100% keeps the footer from riding up when there's little content */
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+/* global font and background for the whole app */
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  background-color: var(--paper);
+  color: var(--ink);
+  margin: 0;
+  padding-top: 0;
+}
+
+/* makes inputs and selects inherit the same font as the rest of the app */
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+}
+
+/* all headings dark and bold by default */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--ink);
+  font-weight: 700;
+  margin: 0;
+}
+
+header .navbar {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+/* overrides bootstrap's focus ring to use the project's colors */
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
+  box-shadow:
+    0 0 0 0.1rem white,
+    0 0 0 0.25rem var(--accent);
+}
+
+/* form-floating placeholder aligned right when empty */
+.form-floating > .form-control-plaintext::placeholder,
+.form-floating > .form-control::placeholder {
+  color: var(--bs-secondary-color);
+  text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder,
+.form-floating > .form-control:focus::placeholder {
+  text-align: start;
+}
+
+/* utility class for the kiosk logo with a dark background */
+.kioskSquare {
+  color: var(--card);
+  background-color: var(--navy);
+}
+
+.ks-hidden {
+  display: none !important;
+}
+
+/* base icon sizing for inline SVGs used across the design system */
+svg.ks-icon {
+  width: 1em;
+  height: 1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* -------- page-level helpers -------- */
+
+.page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 60px 40px 60px;
+}
+
+.page-title {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: -0.5rem;
+}
+
+.page-subtitle {
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--ink-dim);
+  margin-bottom: 1rem;
+}
+
+/* ==========================================================================
+   BUTTONS
+   ========================================================================== */
+
+.btn-ks {
+  display: inline-block;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  border: 2px solid transparent;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.btn-ks:hover {
+  opacity: 0.85;
+}
+
+/* main action (save, approve, publish) */
+.btn-ks-primary {
+  background-color: var(--accent);
+  color: var(--card);
+}
+
+/* positive / confirmation action (answer survey, greet) */
+.btn-ks-secondary {
+  background-color: var(--good);
+  color: var(--card);
+}
+
+/* alternate or destructive action (cancel, log out) */
+.btn-ks-dark {
+  background-color: var(--navy);
+  color: var(--card);
+}
+
+/* outlined, accent-colored (view more, edit) */
+.btn-ks-outline {
+  background-color: transparent;
+  color: var(--accent-dark);
+  border: 2px solid var(--accent);
+}
+
+.btn-ks-outline-dark {
+  background-color: transparent;
+  color: var(--navy);
+  border: 2px solid var(--navy);
+}
+
+/* neutral, low-emphasis action (cancel inside a modal) */
+.btn-ks-ghost {
+  background-color: transparent;
+  border: 1px solid var(--border);
+  color: var(--ink-dim);
+}
+
+.btn-ks-sm {
+  padding: 6px 16px;
+  font-size: 0.875rem;
+  border-radius: 6px;
+}
+
+.btn-ks-lg {
+  padding: 16px 32px;
+  font-size: 1.125rem;
+  width: 100%;
+}
+
+.btn-ks-disabled {
+  background-color: #d9d9d9;
+  color: var(--ink-dim);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.btn-ks-disabled:hover {
+  opacity: 0.7;
+}
+
+/* ==========================================================================
+   CARDS
+   ========================================================================== */
+
+.card-ks {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+.card-ks-featured {
+  background-color: var(--card);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+.card-ks-disabled {
+  background-color: #f0f0f0;
+  border: 2px dashed #b0b0b0;
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+/* dark, gradient module tile used on the company portal home
+   (Payroll, HR, Time & Access, etc.) */
+.ks-module-tile {
+  background: linear-gradient(135deg, var(--navy-2), var(--navy-3));
+  color: var(--card);
+  border-radius: var(--radius);
+  padding: 20px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.ks-module-tile .ks-module-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==========================================================================
+   INPUTS
+   ========================================================================== */
+
+.input-ks {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: var(--paper);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 1rem;
+  color: var(--ink);
+  box-sizing: border-box;
+}
+
+.input-ks:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.input-ks::placeholder {
+  color: var(--ink-faint);
+}
+
+.label-ks {
+  display: block;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+}
+
+.form-group-ks {
+  margin-bottom: 1.25rem;
+}
+
+/* ==========================================================================
+   TOP BAR
+   ========================================================================== */
+
+.ks-topbar {
+  background: var(--navy);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 22px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border-bottom: 1px solid var(--line);
+}
+
+.ks-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.ks-brand .ks-brand-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.ks-brand span {
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.2px;
+}
+
+.ks-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ks-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ks-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.ks-icon-btn .ks-icon-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  background: var(--accent2);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ks-lang-btn {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ks-user-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ks-user-chip .ks-user-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.ks-user-chip .ks-user-role {
+  font-size: 10.5px;
+  color: #B8BEDB;
+  line-height: 1.2;
+}
+
+/* ==========================================================================
+   LAYOUT (sidebar + feed + right rail)
+   ========================================================================== */
+
+.ks-layout {
+  display: grid;
+  grid-template-columns: 230px 1fr 300px;
+  gap: 0;
+  max-width: 1360px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+@media (max-width: 1050px) {
+  .ks-layout {
+    grid-template-columns: 80px 1fr;
+  }
+  .ks-rail {
+    display: none;
+  }
+}
+
+.ks-sidebar {
+  padding: 18px 12px;
+  position: sticky;
+  top: 57px;
+  height: calc(100vh - 57px);
+}
+
+.ks-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-dim);
+  width: 100%;
+  text-align: left;
+  margin-bottom: 2px;
+}
+
+.ks-nav-item svg {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.ks-nav-item:hover {
+  background: #EEF0F7;
+  color: var(--ink);
+}
+
+.ks-nav-item.active {
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+@media (max-width: 1050px) {
+  .ks-nav-item span {
+    display: none;
+  }
+  .ks-nav-item {
+    justify-content: center;
+  }
+}
+
+.ks-side-card {
+  margin-top: 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+@media (max-width: 1050px) {
+  .ks-side-card {
+    display: none;
+  }
+}
+
+.ks-side-card .ks-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ks-side-card canvas {
+  border-radius: 10px;
+}
+
+.ks-xp-bar {
+  height: 7px;
+  background: #EDEEF6;
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.ks-xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 99px;
+}
+
+.ks-mgr-toggle {
+  margin-top: 12px;
+  width: 100%;
+  padding: 9px;
+  border-radius: 9px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: var(--navy);
+  color: #fff;
+}
+
+.ks-feed-col {
+  padding: 20px 22px;
+  min-width: 0;
+}
+
+.ks-view-title {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.ks-view-sub {
+  font-size: 12.5px;
+  color: var(--ink-dim);
+  margin-bottom: 16px;
+}
+
+/* ==========================================================================
+   COMPOSER + TABS
+   ========================================================================== */
+
+.ks-composer {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.ks-composer .ks-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.ks-composer input {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: #FAFBFD;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+
+.ks-composer .ks-composer-types {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.ks-type-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-dim);
+  padding: 7px 11px;
+  border-radius: 8px;
+}
+
+.ks-type-chip:hover {
+  background: #F2F3F8;
+  color: var(--ink);
+}
+
+.ks-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ks-tab {
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-dim);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.ks-tab.active {
+  color: var(--accent-dark);
+  border-color: var(--accent);
+}
+
+/* ==========================================================================
+   POSTS
+   ========================================================================== */
+
+.ks-post {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.ks-post-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ks-post-meta .ks-post-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ks-post-meta .ks-post-sub {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+
+.ks-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.ks-tag-wellness {
+  background: var(--good-soft);
+  color: #0F6E56;
+}
+
+.ks-tag-kudos {
+  background: var(--accent2-soft);
+  color: #A23A2D;
+}
+
+.ks-tag-survey {
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+}
+
+.ks-post-body {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+
+.ks-post-actions {
+  display: flex;
+  gap: 16px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.ks-post-actions button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-dim);
+}
+
+.ks-post-actions button:hover {
+  color: var(--accent-dark);
+}
+
+.ks-post-actions button.liked {
+  color: var(--accent2);
+}
+
+/* ==========================================================================
+   SURVEYS
+   ========================================================================== */
+
+.ks-survey-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  margin-bottom: 7px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.ks-survey-opt:hover {
+  border-color: var(--accent);
+}
+
+.ks-survey-bar-track {
+  height: 5px;
+  background: #EDEEF6;
+  border-radius: 99px;
+  margin-top: 5px;
+  overflow: hidden;
+}
+
+.ks-survey-bar-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+/* ==========================================================================
+   RIGHT RAIL
+   ========================================================================== */
+
+.ks-rail {
+  padding: 20px 0 20px 18px;
+}
+
+.ks-rail-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.ks-rail-card h3 {
+  font-size: 12.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--ink-dim);
+  margin-bottom: 10px;
+}
+
+.ks-announce {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #fff;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.ks-announce .ks-announce-kicker {
+  font-size: 10.5px;
+  font-weight: 700;
+  opacity: 0.85;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+
+.ks-announce .ks-announce-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.ks-announce button {
+  font-size: 11.5px;
+  font-weight: 700;
+  background: #fff;
+  color: var(--accent-dark);
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+.ks-bday-mini {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.ks-bday-mini:last-child {
+  border-bottom: none;
+}
+
+.ks-bday-mini .ks-bday-info {
+  flex: 1;
+}
+
+.ks-bday-mini .ks-bday-info .ks-bday-name {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.ks-bday-mini .ks-bday-info .ks-bday-area {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+.ks-bday-mini button {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-dark);
+}
+
+/* ==========================================================================
+   BIRTHDAYS
+   ========================================================================== */
+
+.ks-section-block {
+  margin-bottom: 26px;
+}
+
+.ks-section-block h2 {
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.ks-bday-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.ks-bday-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  text-align: center;
+}
+
+.ks-bday-card canvas {
+  margin: 0 auto 8px;
+  display: block;
+}
+
+.ks-bday-card .ks-bday-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ks-bday-card .ks-bday-area {
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-bottom: 10px;
+}
+
+.ks-bday-card .ks-cta {
+  width: 100%;
+  border: 1px solid var(--accent);
+  color: var(--accent-dark);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 7px;
+  border-radius: 8px;
+}
+
+.ks-congrats-box {
+  display: none;
+  margin-top: 8px;
+}
+
+.ks-congrats-box.show {
+  display: block;
+}
+
+.ks-congrats-box textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 12px;
+  font-family: inherit;
+  resize: none;
+  height: 52px;
+}
+
+.ks-congrats-box button {
+  margin-top: 6px;
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 7px;
+  border-radius: 8px;
+}
+
+/* ==========================================================================
+   AVATAR EDITOR + BADGES
+   ========================================================================== */
+
+.ks-profile-wrap {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 800px) {
+  .ks-profile-wrap {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ks-avatar-editor {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+}
+
+.ks-swatch-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.ks-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.ks-swatch.active {
+  border-color: var(--ink);
+  transform: scale(1.12);
+}
+
+.ks-hat-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.ks-hat-btn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  color: var(--ink-dim);
+}
+
+.ks-hat-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.ks-badge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ks-badge-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 12px 10px;
+  text-align: center;
+}
+
+.ks-badge-item.earned {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ks-badge-item svg {
+  font-size: 20px;
+  color: var(--ink-faint);
+}
+
+.ks-badge-item.earned svg {
+  color: var(--accent-dark);
+}
+
+.ks-badge-item p {
+  font-size: 10.5px;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+/* ==========================================================================
+   MANAGER VIEW
+   ========================================================================== */
+
+.ks-manager-banner {
+  background: var(--navy);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.ks-manager-banner .ks-mgr-banner-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ks-manager-banner .ks-mgr-banner-sub {
+  font-size: 11px;
+  color: #B8BEDB;
+}
+
+.ks-manager-banner button {
+  font-size: 11.5px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  padding: 7px 12px;
+  border-radius: 8px;
+}
+
+.ks-mgr-table {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.ks-mgr-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  padding: 11px 16px;
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--border-soft);
+  align-items: center;
+}
+
+.ks-mgr-row:last-child {
+  border-bottom: none;
+}
+
+.ks-mgr-row.head {
+  font-weight: 800;
+  color: var(--ink-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ks-mgr-row .ks-mgr-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.ks-mgr-row .ks-mgr-points {
+  font-weight: 800;
+  color: var(--accent-dark);
+  text-align: right;
+}
+
+/* ==========================================================================
+   MODAL / OVERLAY
+   ========================================================================== */
+
+.ks-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 15, 31, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 60;
+}
+
+.ks-overlay.show {
+  display: flex;
+}
+
+.ks-modal {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.ks-modal h3 {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+.ks-modal textarea {
+  width: 100%;
+  height: 80px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: none;
+}
+
+.ks-modal .ks-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.ks-modal .ks-type-opt {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 6px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.ks-modal .ks-type-opt.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+}
+
+.ks-modal .ks-type-opt svg {
+  display: block;
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.ks-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.ks-modal-actions button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   FAB + TOAST
+   ========================================================================== */
+
+.ks-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  z-index: 30;
+  border: none;
+  cursor: pointer;
+}
+
+.ks-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translate(-50%, 12px);
+  background: var(--navy);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  opacity: 0;
+  transition: all 0.25s ease;
+  pointer-events: none;
+  z-index: 70;
+}
+
+.ks-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
