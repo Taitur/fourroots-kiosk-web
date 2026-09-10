@@ -1,0 +1,499 @@
+/* ==========================================================================
+   DASHBOARD · Ficha de asistencia (Recursos Humanos)
+   Portado del prototipo "ficha-empleado.html".
+   Todas las clases van con el prefijo .dash- y las variables de color viven
+   dentro de .dash-page para no colisionar con Bootstrap ni con designSystem.css.
+   ========================================================================== */
+
+.dash-page {
+  --dash-canvas: #F2F3F1;
+  --dash-ink: #11151A;
+  --dash-graphite: #5B6472;
+  --dash-hairline: #DDDFDA;
+  --dash-card-dark: #1B212B;
+  --dash-card-dark-2: #232A36;
+  --dash-brass: #C89B4A;
+  --dash-brass-dim: #8C6E3A;
+  --dash-coral: #C1573F;
+  --dash-teal: #2F6F68;
+  --dash-paper: #FFFFFF;
+
+  background: var(--dash-canvas);
+  color: var(--dash-ink);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  border-radius: 16px;
+  overflow: hidden;
+  margin: 8px 0 32px;
+}
+
+.dash-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 40px 72px;
+}
+
+/* -------- sub-header propio de la ficha -------- */
+.dash-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 40px;
+  border-bottom: 1px solid var(--dash-hairline);
+  background: var(--dash-paper);
+  flex-wrap: wrap;
+}
+
+.dash-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dash-brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--dash-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dash-brand-mark svg {
+  width: 16px;
+  height: 16px;
+}
+
+.dash-brand-name {
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+
+.dash-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dash-profile-text {
+  line-height: 1.25;
+  text-align: right;
+}
+
+.dash-profile-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dash-profile-role {
+  font-size: 12px;
+  color: var(--dash-graphite);
+}
+
+.dash-profile-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--dash-brass);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dash-ink);
+}
+
+/* -------- hero -------- */
+.dash-hero {
+  padding: 56px 0 40px;
+}
+
+.dash-eyebrow {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--dash-graphite);
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.dash-hero h1 {
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 56px;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin-bottom: 22px;
+  color: var(--dash-ink);
+}
+
+.dash-sub {
+  font-size: 18px;
+  color: var(--dash-graphite);
+  max-width: 560px;
+  line-height: 1.5;
+}
+
+/* -------- tarjeta de reloj checador -------- */
+.dash-punchcard {
+  margin-top: 44px;
+  background: var(--dash-ink);
+  border-radius: 14px;
+  padding: 26px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.dash-punchcard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 118px;
+  border-left: 1.5px dashed rgba(255, 255, 255, 0.22);
+}
+
+.dash-pc-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.dash-pc-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  background: var(--dash-brass);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--dash-ink);
+  flex-shrink: 0;
+}
+
+.dash-pc-name {
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  color: #fff;
+}
+
+.dash-pc-role {
+  font-size: 13px;
+  color: #A7ADB8;
+  margin-top: 2px;
+}
+
+.dash-pc-meta {
+  display: flex;
+  gap: 28px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.dash-pc-meta div {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  color: #7C8390;
+}
+
+.dash-pc-meta span {
+  display: block;
+  color: #DEE1E6;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.dash-pc-right {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  text-align: right;
+  padding-left: 24px;
+  flex-shrink: 0;
+}
+
+.dash-pc-status {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dash-brass);
+}
+
+.dash-pc-date {
+  font-size: 22px;
+  color: #fff;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+/* -------- divisor -------- */
+.dash-divider {
+  height: 1px;
+  background: var(--dash-hairline);
+  margin: 48px 0;
+}
+
+/* -------- fila de cifras -------- */
+.dash-stats {
+  display: flex;
+  gap: 56px;
+  flex-wrap: wrap;
+}
+
+.dash-stat-num {
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 38px;
+}
+
+.dash-stat-num.warn { color: var(--dash-coral); }
+.dash-stat-num.good { color: var(--dash-teal); }
+.dash-stat-num.brass { color: var(--dash-brass-dim); }
+
+.dash-stat-label {
+  font-size: 13px;
+  color: var(--dash-graphite);
+  margin-top: 4px;
+}
+
+/* -------- encabezados de módulo -------- */
+.dash-module-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.dash-module-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--dash-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dash-module-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--dash-brass);
+}
+
+.dash-module-title {
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.dash-module-desc {
+  font-size: 13px;
+  color: var(--dash-graphite);
+}
+
+/* -------- tarjetas seleccionables (métricas) -------- */
+.dash-modules {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin: 8px 0 56px;
+}
+
+.dash-module-card {
+  background: var(--dash-card-dark);
+  border-radius: 12px;
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 150px;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  border: 1px solid transparent;
+  color: #fff;
+  text-align: left;
+  width: 100%;
+  font: inherit;
+}
+
+.dash-module-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--dash-brass-dim);
+}
+
+.dash-module-card.active {
+  border-color: var(--dash-brass);
+}
+
+.dash-module-card:focus-visible {
+  outline: 2px solid var(--dash-brass);
+  outline-offset: 2px;
+}
+
+.dash-module-card svg {
+  width: 26px;
+  height: 26px;
+  stroke: var(--dash-brass);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  margin-bottom: auto;
+}
+
+.dash-module-card-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  margin-top: 14px;
+}
+
+/* -------- panel de la gráfica -------- */
+.dash-panel {
+  background: var(--dash-paper);
+  border: 1px solid var(--dash-hairline);
+  border-radius: 14px;
+  padding: 32px;
+  margin-bottom: 56px;
+}
+
+.dash-panel-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.dash-section-title {
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+
+.dash-section-sub {
+  font-size: 14px;
+  color: var(--dash-graphite);
+}
+
+.dash-panel-figures {
+  display: flex;
+  gap: 36px;
+}
+
+.dash-pf-num {
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 26px;
+}
+
+.dash-pf-label {
+  font-size: 12px;
+  color: var(--dash-graphite);
+  margin-top: 2px;
+}
+
+.dash-chart-wrap {
+  position: relative;
+  height: 280px;
+}
+
+/* -------- línea de tiempo de ascensos -------- */
+.dash-timeline {
+  border-left: 2px solid var(--dash-hairline);
+  padding-left: 28px;
+  margin-left: 6px;
+}
+
+.dash-tl-item {
+  position: relative;
+  padding-bottom: 32px;
+}
+
+.dash-tl-item:last-child {
+  padding-bottom: 0;
+}
+
+.dash-tl-item::before {
+  content: "";
+  position: absolute;
+  left: -33.5px;
+  top: 4px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--dash-brass);
+  border: 2px solid var(--dash-paper);
+}
+
+.dash-tl-item.upcoming::before {
+  background: var(--dash-hairline);
+}
+
+.dash-tl-date {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--dash-graphite);
+}
+
+.dash-tl-title {
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  margin: 4px 0;
+}
+
+.dash-tl-item.upcoming .dash-tl-title {
+  color: var(--dash-graphite);
+}
+
+.dash-tl-desc {
+  font-size: 14px;
+  color: var(--dash-graphite);
+  max-width: 520px;
+  line-height: 1.5;
+}
+
+/* -------- footer -------- */
+.dash-footer {
+  padding: 28px 0 4px;
+  border-top: 1px solid var(--dash-hairline);
+  margin-top: 12px;
+}
+
+.dash-footer p {
+  font-size: 12px;
+  color: var(--dash-graphite);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+/* -------- responsive -------- */
+@media (max-width: 900px) {
+  .dash-wrap { padding: 0 20px 56px; }
+  .dash-topbar { padding: 16px 20px; }
+  .dash-hero { padding: 40px 0 32px; }
+  .dash-hero h1 { font-size: 38px; }
+  .dash-modules { grid-template-columns: repeat(2, 1fr); }
+  .dash-punchcard { flex-direction: column; align-items: flex-start; gap: 20px; }
+  .dash-punchcard::before { display: none; }
+  .dash-pc-right { text-align: left; padding-left: 0; }
+  .dash-stats { gap: 32px; }
+}
+
+@media (max-width: 480px) {
+  .dash-modules { grid-template-columns: 1fr; }
+}
