@@ -1,85 +1,20 @@
-# Kiosk Web
+# Kiosco Eslabon — MVC (mock)
 
-Web portal for Eslabón Cloud's Kiosk, focused on self-service HR tasks such as vacations, employee profiles, engagement, and dashboards.
+Backend ASP.NET Core MVC (.NET 8) — Login + Dashboard con datos mock, sesión en memoria (sin base de datos).
 
-This project is developed collaboratively by a five-person team using Git.
-
-## Design System
-
-All team members must follow the project's Design System when creating or updating pages, components, and styles.
-
-The Design System is available at:
-
-```text
-/DesignSystem
+## Correr
 ```
-
-Its implementation can be found in:
-
-```text
-kiosk-web/Views/DesignSystem/Index.cshtml
-kiosk-web/wwwroot/css/
-```
-
-The Design System defines reusable patterns for:
-
-- Colors and themes
-- Typography
-- Buttons and cards
-- Forms and inputs
-- Navigation and tabs
-- Posts and surveys
-- Avatars and badges
-- Modals and notifications
-- Manager views
-- Responsive layouts
-
-## Team Guidelines
-
-Before building a new interface:
-
-1. Review the Design System.
-2. Reuse existing CSS classes whenever possible.
-3. Keep colors, spacing, typography, and component behavior consistent.
-4. Add reusable components to the Design System when appropriate.
-5. Avoid creating one-off styles that duplicate existing components.
-6. Test the interface on desktop and mobile screen sizes.
-7. Follow accessibility best practices, including semantic HTML, labels, keyboard-friendly controls, and sufficient color contrast.
-
-## Project Structure
-
-```text
-kiosk-web/
-├── Controllers/       MVC controllers
-├── Models/            View models
-├── Services/          Application services
-├── Views/             Razor views
-├── wwwroot/css/       Stylesheets
-├── wwwroot/js/        JavaScript files
-└── wwwroot/lib/       Frontend libraries
-```
-
-## Running the Project
-
-Make sure the .NET 9 SDK is installed, then run:
-
-```bash
 dotnet restore
-dotnet run --project kiosk-web
+dotnet run
 ```
+Abre https://localhost:5001 (o el puerto que indique la consola). Cualquier usuario/contraseña no vacíos inicia sesión.
 
-Open the URL shown in the terminal. To view the Design System, navigate to `/DesignSystem`.
+## Estructura
+- `Controllers/AccountController.cs` — login/logout (sesión)
+- `Controllers/DashboardController.cs` — dashboard (requiere sesión)
+- `Controllers/NotificationsController.cs` — API mock (`/api/notifications`)
+- `Services/MockDataService.cs` — módulos, apps y notificaciones falsas
+- `Views/Account/Login.cshtml`, `Views/Dashboard/Index.cshtml`
+- `wwwroot/` — CSS y JS del cliente
 
-## Git Guidelines
-
-Use clear and descriptive commit messages, for example:
-
-```text
-Add vacation request form
-Update Design System button variants
-Fix responsive dashboard layout
-```
-
-Do not commit generated files, local settings, secrets, or build output. These files are covered by `.gitignore`.
-
-Never commit passwords, API keys, private connection strings, or other sensitive information.
+Migrado desde una versión previa en Node/Express con el mismo alcance (Login + Dashboard, mock API). Para conectarlo a datos reales, reemplaza `MockDataService` por servicios que consulten tu base de datos / API de Eslabón Cloud.
