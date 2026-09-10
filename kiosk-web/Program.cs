@@ -6,6 +6,9 @@ builder.Services.AddControllersWithViews();
 // Dashboard (ficha de asistencia) - datos de ejemplo mientras no exista el backend real.
 builder.Services.AddScoped<kiosk_web.Services.IDashboardService, kiosk_web.Services.DashboardService>();
 
+// Avatar (Mi Avatar) - datos de ejemplo mientras no exista el backend real.
+builder.Services.AddScoped<kiosk_web.Services.IAvatarService, kiosk_web.Services.AvatarService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -27,6 +30,5 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
-
 
 app.Run();
