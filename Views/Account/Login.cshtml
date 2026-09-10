@@ -1,0 +1,60 @@
+@model LoginViewModel
+@{ ViewData["Title"] = "Iniciar sesión"; }
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Iniciar sesión — Portal Eslabon</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" />
+<link rel="stylesheet" href="~/css/styles.css" />
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-panel">
+      <div class="brand"><span class="box">E</span> Eslabon</div>
+      <div>
+        <div class="quote">Portal Empresarial de Autoservicio</div>
+        <div class="quote-sub">Nómina, Capital Humano y Tiempo &amp; Accesos en un solo lugar.</div>
+      </div>
+      <div></div>
+    </div>
+    <div class="login-form-side">
+      <form class="login-form" asp-controller="Account" asp-action="Login" method="post">
+        @Html.AntiForgeryToken()
+        <h2>Bienvenido de nuevo</h2>
+        <p class="sub">Introduce tus credenciales para continuar</p>
+        @if (!string.IsNullOrEmpty(Model.Error))
+        {
+          <div class="error-login">@Model.Error</div>
+        }
+        <div class="campo">
+          <label>Usuario</label>
+          <input type="text" name="Username" value="@Model.Username" placeholder="usuario@empresa.com" autocomplete="username" />
+        </div>
+        <div class="campo">
+          <label>Contraseña</label>
+          <div class="campo-pwd">
+            <input type="password" id="password" name="Password" placeholder="••••••••" autocomplete="current-password" />
+            <button type="button" id="togglePwd"><span class="material-symbols-outlined" id="pwdIcon" style="font-size:18px;">visibility</span></button>
+          </div>
+        </div>
+        <div class="fila-opciones">
+          <label><input type="checkbox" name="RememberMe" /> Mantener sesión</label>
+          <a href="#">¿Olvidaste tu contraseña?</a>
+        </div>
+        <button type="submit" class="btn-login"><span class="material-symbols-outlined" style="font-size:18px;">login</span> Iniciar sesión</button>
+      </form>
+    </div>
+  </div>
+  <script>
+    document.getElementById("togglePwd").addEventListener("click", () => {
+      const input = document.getElementById("password");
+      const icon = document.getElementById("pwdIcon");
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      icon.textContent = show ? "visibility_off" : "visibility";
+    });
+  </script>
+</body>
+</html>
