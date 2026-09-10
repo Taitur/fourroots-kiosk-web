@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
- 
+
 namespace kiosk_web.Controllers
 {
     public class DesignSystemController : Controller
@@ -10,4 +10,3 @@ namespace kiosk_web.Controllers
         }
     }
 }
- 
