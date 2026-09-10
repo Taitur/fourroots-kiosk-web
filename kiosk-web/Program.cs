@@ -3,6 +3,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+// Dashboard (ficha de asistencia) - datos de ejemplo mientras no exista el backend real.
+builder.Services.AddScoped<kiosk_web.Services.IDashboardService, kiosk_web.Services.DashboardService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
