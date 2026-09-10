@@ -31,7 +31,7 @@ public class MockDataService
             Apps = new() {
                 new AppModel { Id = "asist", Name = "Asistencia", Desc = "Registro y seguimiento", Icon = "fact_check" },
                 new AppModel { Id = "horar", Name = "Horarios", Desc = "Turnos y calendarios", Icon = "calendar_month" },
-                new AppModel { Id = "vacaciones", Name = "Vacaciones", Desc = "Solicitudes y saldo", Icon = "beach_access" },
+                new AppModel { Id = "vacaciones", Name = "Vacaciones", Desc = "Solicitudes y saldo", Icon = "beach_access", Url = "/Vacations/Index" },
             }
         },
     };
