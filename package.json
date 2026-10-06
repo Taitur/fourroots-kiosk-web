@@ -1,0 +1,20 @@
+{
+  "name": "fourroots-kiosk",
+  "version": "1.0.0",
+  "description": "Kiosco Eslabon — Node.js + Express (MVC) con datos mock",
+  "main": "app.js",
+  "private": true,
+  "scripts": {
+    "start": "nodemon app.js",
+    "dev": "node --watch app.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ejs": "^7.0.1",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "mssql": "^12.7.4"
+  }
+}
