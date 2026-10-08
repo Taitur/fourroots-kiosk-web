@@ -28,9 +28,9 @@ router.get(["/Avatar", "/Avatar/Index", "/Avatar/Index/:id"], requireAuth, avata
 router.get(["/Engage", "/Engage/Index"], requireAuth, engage.index);
 router.get(["/Vacations", "/Vacations/Index"], requireAuth, vacations.index);
 
-// ---- API mock de notificaciones ----
-router.get("/api/notifications", notifications.list);
-router.patch("/api/notifications/read-all", notifications.markAllRead);
-router.patch("/api/notifications/:id/read", notifications.markRead);
+// ---- API de notificaciones (kio_tbMensajes) ----
+router.get("/api/notifications", requireAuth, notifications.list);
+router.patch("/api/notifications/read-all", requireAuth, notifications.markAllRead);
+router.patch("/api/notifications/:id/read", requireAuth, notifications.markRead);
 
 module.exports = router;

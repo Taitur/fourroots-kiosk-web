@@ -19,15 +19,15 @@
 
   <div class="ks-vac-stats">
     <div class="ks-vac-stat">
-      <div class="ks-vac-stat-num">15</div>
+      <div class="ks-vac-stat-num"><%= summary.disponibles %></div>
       <div class="ks-vac-stat-label">Días disponibles</div>
     </div>
     <div class="ks-vac-stat">
-      <div class="ks-vac-stat-num">0</div>
+      <div class="ks-vac-stat-num"><%= summary.usados %></div>
       <div class="ks-vac-stat-label">Días utilizados</div>
     </div>
     <div class="ks-vac-stat">
-      <div class="ks-vac-stat-num">15</div>
+      <div class="ks-vac-stat-num"><%= summary.restantes %></div>
       <div class="ks-vac-stat-label">Días restantes</div>
     </div>
   </div>
@@ -104,21 +104,21 @@
           </div>
           <div>
             <div class="ks-vac-side-title">Mis vacaciones</div>
-            <div class="ks-vac-side-subtitle">Año 2026</div>
+            <div class="ks-vac-side-subtitle">Año <%= summary.year %></div>
           </div>
         </div>
 
         <div class="ks-vac-row">
           <span>Días disponibles</span>
-          <span class="ks-vac-row-value">15</span>
+          <span class="ks-vac-row-value"><%= summary.disponibles %></span>
         </div>
         <div class="ks-vac-row is-dark">
           <span>Días utilizados</span>
-          <span class="ks-vac-row-value">0</span>
+          <span class="ks-vac-row-value"><%= summary.usados %></span>
         </div>
         <div class="ks-vac-row">
           <span>Días restantes</span>
-          <span class="ks-vac-row-value">15</span>
+          <span class="ks-vac-row-value"><%= summary.restantes %></span>
         </div>
       </div>
 

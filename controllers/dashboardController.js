@@ -1,15 +1,13 @@
-const mockData = require("../models/mockDataModel");
+const dashboardModel = require("../models/dashboardModel");
 
 // GET /Dashboard/Index
-function index(req, res) {
-  res.render("dashboard/index", {
-    modules: mockData.getModules(),
-    user: {
-      name: req.session.userName,
-      role: req.session.userRole,
-      initials: req.session.userInitials,
-    },
-  });
+async function index(req, res) {
+  const [modules, employeeCount] = await Promise.all([
+    dashboardModel.getModulesForUser(req.session.user.id),
+    dashboardModel.countActiveEmployees(),
+  ]);
+
+  res.render("dashboard/index", { modules, employeeCount });
 }
 
 module.exports = { index };

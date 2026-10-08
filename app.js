@@ -1,14 +1,15 @@
 const path = require("path");
+
+// Debe cargarse antes que cualquier otro módulo: db.js lee process.env al importarse.
+require("dotenv").config({ path: path.join(__dirname, ".env"), quiet: true });
+
 const express = require("express");
 const session = require("express-session");
-const dotenv = require("dotenv");
 
 const routes = require("./routes");
 
 const app = express();
 const isProduction = process.env.NODE_ENV === "production";
-
-dotenv.config({ path: path.join(__dirname, ".env") });
 
 // Vistas (EJS) — equivalente a Razor.
 app.set("view engine", "ejs");

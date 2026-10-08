@@ -22,8 +22,16 @@ document.addEventListener("click", () => {
   document.getElementById("userPanel").classList.remove("open");
 });
 
+// Los mensajes vienen de la BD: se escapan antes de insertarlos como HTML.
+function escapeHtml(text) {
+  return String(text ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
+  );
+}
+
 async function loadNotifications() {
   const res = await fetch("/api/notifications");
+  if (!res.ok) return;
   const items = await res.json();
   const unread = items.filter((n) => !n.read);
   const badge = document.getElementById("bellBadge");
@@ -34,7 +42,7 @@ async function loadNotifications() {
   const list = document.getElementById("notifList");
   list.innerHTML = items.map((n) =>
     '<div class="notif-item ' + (n.read ? "" : "unread") + '">' +
-      '<div><p>' + n.title + '</p><span class="desc">' + n.desc + '</span><br><span class="time">' + n.time + '</span></div>' +
+      '<div><p>' + escapeHtml(n.title) + '</p><span class="desc">' + escapeHtml(n.desc) + '</span><br><span class="time">' + escapeHtml(n.time) + '</span></div>' +
     '</div>'
   ).join("");
 }

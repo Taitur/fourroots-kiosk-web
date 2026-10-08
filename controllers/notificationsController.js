@@ -1,19 +1,19 @@
-const mockData = require("../models/mockDataModel");
+const notificationModel = require("../models/notificationModel");
 
 // GET /api/notifications
-function list(req, res) {
-  res.json(mockData.getNotifications());
+async function list(req, res) {
+  res.json(await notificationModel.getForUser(req.session.user.id));
 }
 
 // PATCH /api/notifications/:id/read
-function markRead(req, res) {
-  if (!mockData.markNotificationRead(req.params.id)) return res.sendStatus(404);
-  res.sendStatus(200);
+async function markRead(req, res) {
+  const updated = await notificationModel.markRead(req.session.user.id, req.params.id);
+  res.sendStatus(updated ? 200 : 404);
 }
 
 // PATCH /api/notifications/read-all
-function markAllRead(req, res) {
-  mockData.markAllNotificationsRead();
+async function markAllRead(req, res) {
+  await notificationModel.markAllRead(req.session.user.id);
   res.sendStatus(200);
 }
 

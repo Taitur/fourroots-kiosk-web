@@ -36,10 +36,10 @@
 
         <div class="dropdown-wrap">
           <button class="user-block" id="avatarBtn">
-            <span class="avatar"><%= user.initials %></span>
+            <span class="avatar"><%= currentUser.initials %></span>
             <span>
-              <p class="name"><%= user.name %></p>
-              <p class="role"><%= user.role %></p>
+              <p class="name"><%= currentUser.name %></p>
+              <p class="role"><%= currentUser.role %></p>
             </span>
             <span class="material-symbols-outlined" style="font-size:16px; color:#6B7280;">expand_more</span>
           </button>
@@ -62,7 +62,7 @@
     <div class="stats">
       <div><p class="num"><%= modules.length %></p><p class="label">Módulos activos</p></div>
       <div><p class="num"><%= modules.reduce((sum, m) => sum + m.apps.length, 0) %></p><p class="label">Aplicaciones</p></div>
-      <div><p class="num">1,248</p><p class="label">Empleados registrados</p></div>
+      <div><p class="num"><%= employeeCount.toLocaleString("es-MX") %></p><p class="label">Empleados registrados</p></div>
     </div>
   </main>
 
