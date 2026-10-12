@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Portal Eslabon — Dashboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" />
+<link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="box"><span class="material-symbols-outlined" style="font-size:17px; color:#fff;">bolt</span></span>
+        <span class="name">Eslabon</span>
+      </div>
+      <div class="header-right">
+        <button class="icon-btn" title="Narrar página"><span class="material-symbols-outlined" style="font-size:18px;">volume_off</span></button>
+        <button class="icon-btn" title="Personalizar colores"><span class="material-symbols-outlined" style="font-size:18px;">palette</span></button>
+        <button class="icon-btn" title="Navegar entre aplicaciones"><span class="material-symbols-outlined" style="font-size:18px;">space_dashboard</span></button>
+        <div class="divider"></div>
+
+        <div class="dropdown-wrap">
+          <button class="icon-btn" id="bellBtn" title="Notificaciones">
+            <span class="material-symbols-outlined" style="font-size:18px;">notifications</span>
+            <span class="badge-dot" id="bellBadge" style="display:none;"></span>
+          </button>
+          <div class="dropdown-panel" id="bellPanel">
+            <div class="dropdown-head" style="display:flex; align-items:center; justify-content:space-between;">
+              <div><p>Notificaciones</p><span id="unreadLabel"></span></div>
+              <a href="#" id="markAllRead" style="font-size:12px; font-weight:600;">Marcar leídas</a>
+            </div>
+            <div id="notifList"></div>
+          </div>
+        </div>
+
+        <div class="dropdown-wrap">
+          <button class="user-block" id="avatarBtn">
+            <span class="avatar"><%= currentUser.initials %></span>
+            <span>
+              <p class="name"><%= currentUser.name %></p>
+              <p class="role"><%= currentUser.role %></p>
+            </span>
+            <span class="material-symbols-outlined" style="font-size:16px; color:#6B7280;">expand_more</span>
+          </button>
+          <div class="dropdown-panel" id="userPanel" style="width:220px;">
+            <a class="item" style="text-decoration:none; color:inherit;" href="/Avatar"><span class="material-symbols-outlined" style="font-size:18px;">person</span> Mi perfil</a>
+            <div class="item"><span class="material-symbols-outlined" style="font-size:18px;">tune</span> Preferencias</div>
+            <div class="item" id="userNotifItem"><span class="material-symbols-outlined" style="font-size:18px;">notifications_active</span> Notificaciones</div>
+            <div class="item"><span class="material-symbols-outlined" style="font-size:18px;">help</span> Ayuda y soporte</div>
+            <a class="item" style="color:#B91C1C; text-decoration:none;" href="/Account/Logout"><span class="material-symbols-outlined" style="font-size:18px;">logout</span> Cerrar sesión</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="hero">
+    <p class="eyebrow">Sistema Integral · Recursos Humanos</p>
+    <h1>Portal<br>Empresarial</h1>
+    <p class="sub">Accede a todos los módulos de gestión empresarial desde un punto centralizado.</p>
+    <div class="stats">
+      <div><p class="num"><%= modules.length %></p><p class="label">Módulos activos</p></div>
+      <div><p class="num"><%= modules.reduce((sum, m) => sum + m.apps.length, 0) %></p><p class="label">Aplicaciones</p></div>
+      <div><p class="num"><%= employeeCount.toLocaleString("es-MX") %></p><p class="label">Empleados registrados</p></div>
+    </div>
+  </main>
+
+  <div class="modules-wrap">
+    <% modules.forEach((m) => {
+         const firstApp = m.apps.find((a) => a.url);
+         const primerUrl = firstApp ? firstApp.url : null; %>
+      <div class="modulo-block">
+        <div class="modulo-head">
+          <div class="icon-box"><span class="material-symbols-outlined" style="font-size:21px; color:#fff;"><%= m.icon %></span></div>
+          <div class="info"><h2><%= m.title %></h2><p><%= m.description %></p></div>
+          <% if (primerUrl) { %>
+            <a class="btn-abrir" style="text-decoration:none;" href="<%= primerUrl %>">Abrir módulo <span class="material-symbols-outlined" style="font-size:15px;">arrow_forward</span></a>
+          <% } else { %>
+            <button class="btn-abrir" disabled style="opacity:.5; cursor:not-allowed;">Abrir módulo <span class="material-symbols-outlined" style="font-size:15px;">arrow_forward</span></button>
+          <% } %>
+        </div>
+        <div class="apps-row">
+          <% m.apps.forEach((a) => { %>
+            <% if (a.url) { %>
+              <a class="app-card" style="text-decoration:none; color:inherit; cursor:pointer;" href="<%= a.url %>">
+                <div class="icono">
+                  <div class="deco1"></div>
+                  <div class="deco2"></div>
+                  <span class="material-symbols-outlined ico"><%= a.icon %></span>
+                </div>
+                <div class="cuerpo"><p><%= a.name %></p><span><%= a.desc %></span></div>
+              </a>
+            <% } else { %>
+              <div class="app-card" style="opacity:.55;" title="Próximamente">
+                <div class="icono">
+                  <div class="deco1"></div>
+                  <div class="deco2"></div>
+                  <span class="material-symbols-outlined ico"><%= a.icon %></span>
+                </div>
+                <div class="cuerpo"><p><%= a.name %></p><span><%= a.desc %></span></div>
+              </div>
+            <% } %>
+          <% }) %>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>
