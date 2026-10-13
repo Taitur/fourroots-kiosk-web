@@ -1,0 +1,64 @@
+/* Temas de color del portal. Tema "Clásico" = sin atributo (colores originales de cada hoja de estilos).
+   public/js/theme-init.js pone data-portal-theme="<tema>" en <html>; public/js/portal-tools.js lo cambia.
+
+   Cada tema define cinco colores:
+     --tema         superficie principal oscura (marca, avatar, botones, selección)
+     --tema-claro   inicio de los degradados de los iconos
+     --tema-acento  color de acento (pestañas, enlaces activos...)
+     --tema-alerta  avisos y contadores (en el tema Clásico es rojo)
+     --tema-exito   estados correctos
+   y de ahí se derivan las variables del sistema de diseño (--navy, --accent, --good...) y las del dashboard.
+
+   Los tres temas de daltonismo siguen la paleta Okabe-Ito: nunca dependen de distinguir rojo de verde
+   (deuteranopía y protanopía) ni azul de amarillo (tritanopía). */
+
+html[data-portal-theme="azul"] {
+  --tema: #1D4ED8; --tema-claro: #60A5FA; --tema-acento: #2563EB;
+  --tema-alerta: #DC2626; --tema-error: #B91C1C; --tema-exito: #047857;
+}
+html[data-portal-theme="verde"] {
+  --tema: #047857; --tema-claro: #34D399; --tema-acento: #047857;
+  --tema-alerta: #DC2626; --tema-error: #B91C1C; --tema-exito: #047857;
+}
+html[data-portal-theme="violeta"] {
+  --tema: #6D28D9; --tema-claro: #A78BFA; --tema-acento: #7C3AED;
+  --tema-alerta: #DC2626; --tema-error: #B91C1C; --tema-exito: #047857;
+}
+html[data-portal-theme="ambar"] {
+  --tema: #B45309; --tema-claro: #FBBF24; --tema-acento: #B45309;
+  --tema-alerta: #B91C1C; --tema-error: #991B1B; --tema-exito: #047857;
+}
+
+/* Deuteranopía (no distingue rojo de verde): azul + naranja */
+html[data-portal-theme="deuteranopia"] {
+  --tema: #0050C8; --tema-claro: #6AA5F0; --tema-acento: #0072B2;
+  --tema-alerta: #C2410C; --tema-error: #C2410C; --tema-exito: #0369A1;
+}
+/* Protanopía (no percibe el rojo): azul + amarillo */
+html[data-portal-theme="protanopia"] {
+  --tema: #0077B6; --tema-claro: #5CC2F2; --tema-acento: #0369A1;
+  --tema-alerta: #A16207; --tema-error: #854D0E; --tema-exito: #0369A1;
+}
+/* Tritanopía (no distingue azul de amarillo): rojo + verde. El aviso va en casi negro para que
+   no se confunda con el rojo principal. */
+html[data-portal-theme="tritanopia"] {
+  --tema: #A31D1D; --tema-claro: #E57373; --tema-acento: #B91C1C;
+  --tema-alerta: #111827; --tema-error: #7F1D1D; --tema-exito: #15803D;
+}
+
+/* Variables derivadas, comunes a todos los temas distintos de Clásico. */
+html[data-portal-theme] {
+  /* sistema de diseño (designSystem.css, vacations.css, incidences.css, engage.css...) */
+  --navy: var(--tema);
+  --accent: var(--tema-acento);
+  --accent-dark: color-mix(in srgb, var(--tema-acento) 75%, #000);
+  --accent-soft: color-mix(in srgb, var(--tema-acento) 12%, #fff);
+  --accent2: var(--tema-alerta);
+  --accent2-soft: color-mix(in srgb, var(--tema-alerta) 12%, #fff);
+  --good: var(--tema-exito);
+  --good-soft: color-mix(in srgb, var(--tema-exito) 14%, #fff);
+
+  /* login (panel lateral con degradado) */
+  --tema-login-1: color-mix(in srgb, var(--tema) 78%, #fff);
+  --tema-login-3: color-mix(in srgb, var(--tema) 40%, #000);
+}

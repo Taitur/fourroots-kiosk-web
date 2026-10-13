@@ -9,6 +9,7 @@ const attendance = require("../controllers/attendanceController");
 const avatar = require("../controllers/avatarController");
 const engage = require("../controllers/engageController");
 const vacations = require("../controllers/vacationsController");
+const incidences = require("../controllers/incidencesController");
 const notifications = require("../controllers/notificationsController");
 
 const router = express.Router();
@@ -26,7 +27,11 @@ router.get(["/Dashboard", "/Dashboard/Index"], requireAuth, dashboard.index);
 router.get(["/Attendance", "/Attendance/Index", "/Attendance/Index/:id"], requireAuth, attendance.index);
 router.get(["/Avatar", "/Avatar/Index", "/Avatar/Index/:id"], requireAuth, avatar.index);
 router.get(["/Engage", "/Engage/Index"], requireAuth, engage.index);
-router.get(["/Vacations", "/Vacations/Index"], requireAuth, vacations.index);
+router.get(["/Vacations", "/Vacations/Index"], requireAuth, csrf.provideToken, vacations.index);
+router.post("/Vacations/Request", requireAuth, csrf.verifyToken, vacations.request);
+router.get(["/Incidences", "/Incidences/Index"], requireAuth, csrf.provideToken, incidences.index);
+router.post("/Incidences/Request", requireAuth, csrf.verifyToken, incidences.request);
+router.post("/Incidences/Cancel/:id", requireAuth, csrf.verifyToken, incidences.cancel);
 
 // ---- API de notificaciones (kio_tbMensajes) ----
 router.get("/api/notifications", requireAuth, notifications.list);

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Solicitar Vacaciones</title>
 <link rel="stylesheet" href="/css/vacations.css" />
+<%- include('../partials/theme-head') %>
 </head>
 <body>
 
@@ -19,15 +20,15 @@
 
   <div class="ks-vac-stats">
     <div class="ks-vac-stat">
-      <div class="ks-vac-stat-num"><%= summary.disponibles %></div>
+      <div class="ks-vac-stat-num" data-summary="disponibles"><%= summary.disponibles %></div>
       <div class="ks-vac-stat-label">Días disponibles</div>
     </div>
     <div class="ks-vac-stat">
-      <div class="ks-vac-stat-num"><%= summary.usados %></div>
+      <div class="ks-vac-stat-num" data-summary="usados"><%= summary.usados %></div>
       <div class="ks-vac-stat-label">Días utilizados</div>
     </div>
     <div class="ks-vac-stat">
-      <div class="ks-vac-stat-num"><%= summary.restantes %></div>
+      <div class="ks-vac-stat-num" data-summary="restantes"><%= summary.restantes %></div>
       <div class="ks-vac-stat-label">Días restantes</div>
     </div>
   </div>
@@ -42,15 +43,15 @@
             <svg class="ks-icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
           </div>
           <div>
-            <div class="ks-cal-title">Septiembre 2026</div>
+            <div class="ks-cal-title" id="calTitle"></div>
             <div class="ks-cal-subtitle">Selecciona tus días de vacaciones</div>
           </div>
         </div>
         <div class="ks-cal-nav">
-          <button class="ks-cal-nav-btn" aria-label="Mes anterior">
+          <button type="button" class="ks-cal-nav-btn" id="calPrev" aria-label="Mes anterior">
             <svg class="ks-icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
-          <button class="ks-cal-nav-btn" aria-label="Mes siguiente">
+          <button type="button" class="ks-cal-nav-btn" id="calNext" aria-label="Mes siguiente">
             <svg class="ks-icon" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
           </button>
         </div>
@@ -60,39 +61,8 @@
         <span>DOM</span><span>LUN</span><span>MAR</span><span>MIÉ</span><span>JUE</span><span>VIE</span><span>SÁB</span>
       </div>
 
-      <div class="ks-cal-days">
-        <div class="ks-cal-day is-outside">30</div>
-        <div class="ks-cal-day is-outside">31</div>
-        <div class="ks-cal-day">1</div>
-        <div class="ks-cal-day">2</div>
-        <div class="ks-cal-day">3</div>
-        <div class="ks-cal-day">4</div>
-        <div class="ks-cal-day">5</div>
-
-        <div class="ks-cal-day">6</div>
-        <div class="ks-cal-day">7</div>
-        <div class="ks-cal-day">8</div>
-        <div class="ks-cal-day is-today">9</div>
-        <div class="ks-cal-day">10</div>
-        <div class="ks-cal-day">11</div>
-        <div class="ks-cal-day">12</div>
-
-        <div class="ks-cal-day">13</div>
-        <div class="ks-cal-day">14</div>
-        <div class="ks-cal-day">15</div>
-        <div class="ks-cal-day">16</div>
-        <div class="ks-cal-day">17</div>
-        <div class="ks-cal-day">18</div>
-        <div class="ks-cal-day">19</div>
-
-        <div class="ks-cal-day">20</div>
-        <div class="ks-cal-day">21</div>
-        <div class="ks-cal-day">22</div>
-        <div class="ks-cal-day">23</div>
-        <div class="ks-cal-day">24</div>
-        <div class="ks-cal-day">25</div>
-        <div class="ks-cal-day is-outside">26</div>
-      </div>
+      <!-- Los días se generan en public/js/vacations.js -->
+      <div class="ks-cal-days" id="calDays"></div>
     </div>
 
     <!-- Columna derecha -->
@@ -110,15 +80,15 @@
 
         <div class="ks-vac-row">
           <span>Días disponibles</span>
-          <span class="ks-vac-row-value"><%= summary.disponibles %></span>
+          <span class="ks-vac-row-value" data-summary="disponibles"><%= summary.disponibles %></span>
         </div>
         <div class="ks-vac-row is-dark">
           <span>Días utilizados</span>
-          <span class="ks-vac-row-value"><%= summary.usados %></span>
+          <span class="ks-vac-row-value" data-summary="usados"><%= summary.usados %></span>
         </div>
         <div class="ks-vac-row">
           <span>Días restantes</span>
-          <span class="ks-vac-row-value"><%= summary.restantes %></span>
+          <span class="ks-vac-row-value" data-summary="restantes"><%= summary.restantes %></span>
         </div>
       </div>
 
@@ -129,11 +99,19 @@
           </div>
           <div class="ks-vac-side-title">Sugerencias</div>
         </div>
-        <p class="ks-vac-tip-text">No hay feriados este mes. Navega a otros meses para ver sugerencias inteligentes.</p>
+        <p class="ks-vac-tip-text" id="calTips">No hay feriados este mes. Navega a otros meses para ver sugerencias inteligentes.</p>
       </div>
 
       <div class="card-ks ks-vac-hint-box">
         Haz clic en cualquier día laborable del calendario para marcarlo como vacaciones.
+        <div class="ks-vac-selection" id="vacSelection" hidden>
+          <div class="ks-vac-selection-text" id="vacSelectionText"></div>
+          <div class="ks-vac-selection-actions">
+            <button type="button" class="ks-vac-btn ks-vac-btn-ghost" id="vacClear">Limpiar</button>
+            <button type="button" class="ks-vac-btn" id="vacSubmit">Solicitar vacaciones</button>
+          </div>
+        </div>
+        <div class="ks-vac-message" id="vacMessage" hidden></div>
       </div>
     </div>
 
@@ -141,5 +119,10 @@
 
 </div>
 
+<script>
+  window.VACATIONS = <%- toScriptJson(calendarData) %>;
+  window.CSRF_TOKEN = <%- toScriptJson(csrfToken) %>;
+</script>
+<script src="/js/vacations.js"></script>
 </body>
 </html>

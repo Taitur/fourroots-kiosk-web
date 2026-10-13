@@ -13,7 +13,8 @@ function provideToken(req, res, next) {
 
 function verifyToken(req, res, next) {
   const expected = req.session.csrfToken;
-  const received = req.body && req.body._csrf;
+  // Formularios lo envían como campo oculto; las peticiones fetch, en la cabecera.
+  const received = (req.body && req.body._csrf) || req.get("X-CSRF-Token");
 
   const valid =
     typeof expected === "string" &&
