@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Incidencias — Portal Eslabon</title>
+<link rel="stylesheet" href="/css/vacations.css" />
+<link rel="stylesheet" href="/css/incidences.css" />
+<%- include('../partials/theme-head') %>
+</head>
+<body>
+
+<div class="page-container">
+
+  <a href="/Dashboard/Index" style="display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:0.85rem; font-weight:600; margin-bottom:18px;">
+    <svg class="ks-icon" viewBox="0 0 24 24" style="width:16px; height:16px;"><path d="M15 18l-6-6 6-6"/></svg>
+    Volver al Dashboard
+  </a>
+
+  <h1 class="page-title">Solicitar<br>Permisos</h1>
+  <p class="ks-vac-lead">Avisa de una enfermedad, una llegada tardía o cualquier otro permiso.</p>
+
+  <div class="ks-vac-stats">
+    <div class="ks-vac-stat">
+      <div class="ks-vac-stat-num" id="statProceso">0</div>
+      <div class="ks-vac-stat-label">En proceso</div>
+    </div>
+    <div class="ks-vac-stat">
+      <div class="ks-vac-stat-num" id="statAceptadas">0</div>
+      <div class="ks-vac-stat-label">Aceptadas</div>
+    </div>
+    <div class="ks-vac-stat">
+      <div class="ks-vac-stat-num" id="statCanceladas">0</div>
+      <div class="ks-vac-stat-label">Canceladas</div>
+    </div>
+  </div>
+
+  <div class="ks-inc-grid">
+
+    <!-- Formulario -->
+    <div class="card-ks ks-inc-form-card">
+      <div class="ks-vac-side-head">
+        <div class="ks-vac-side-icon">
+          <svg class="ks-icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+        <div>
+          <div class="ks-vac-side-title">Nueva solicitud</div>
+          <div class="ks-vac-side-subtitle">Elige el tipo y completa los datos</div>
+        </div>
+      </div>
+
+      <div class="ks-inc-label">Tipo de incidencia</div>
+      <div class="ks-inc-types" id="incTypes"></div>
+
+      <form id="incForm" novalidate>
+        <div class="ks-inc-fields">
+          <label class="ks-inc-field">
+            <span class="ks-inc-label" id="incDateLabel">Fecha</span>
+            <input type="date" id="incDate" required>
+          </label>
+          <label class="ks-inc-field" id="incEndDateField" hidden>
+            <span class="ks-inc-label">Hasta</span>
+            <input type="date" id="incEndDate">
+          </label>
+          <label class="ks-inc-field" id="incStartField" hidden>
+            <span class="ks-inc-label">Hora de inicio</span>
+            <input type="time" id="incStart">
+          </label>
+          <label class="ks-inc-field" id="incEndField" hidden>
+            <span class="ks-inc-label">Hora de fin</span>
+            <input type="time" id="incEnd">
+          </label>
+        </div>
+
+        <label class="ks-inc-field">
+          <span class="ks-inc-label">Comentarios <span id="incCommentHint" class="ks-inc-optional">(opcional)</span></span>
+          <textarea id="incComment" rows="3" placeholder="Cuéntanos brevemente el motivo"></textarea>
+          <span class="ks-inc-counter" id="incCounter"></span>
+        </label>
+
+        <p class="ks-inc-summary" id="incSummary" hidden></p>
+        <div class="ks-vac-message" id="incMessage" hidden></div>
+
+        <div class="ks-inc-actions">
+          <button type="submit" class="ks-vac-btn" id="incSubmit" disabled>Enviar solicitud</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Mis solicitudes -->
+    <div class="card-ks ks-inc-list-card">
+      <div class="ks-vac-side-head">
+        <div class="ks-vac-side-icon">
+          <svg class="ks-icon" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
+        </div>
+        <div>
+          <div class="ks-vac-side-title">Mis solicitudes</div>
+          <div class="ks-vac-side-subtitle">De la más reciente a la más antigua</div>
+        </div>
+      </div>
+      <div id="incList"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  window.INCIDENCES = <%- toScriptJson(pageData) %>;
+  window.CSRF_TOKEN = <%- toScriptJson(csrfToken) %>;
+</script>
+<script src="/js/incidences.js"></script>
+</body>
+</html>

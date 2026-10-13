@@ -258,3 +258,60 @@ svg.ks-icon {
   color: var(--ink-dim);
   line-height: 1.5;
 }
+/* --- estados del calendario (vacations.js) --- */
+
+.ks-cal-day.is-disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+  background: transparent;
+}
+.ks-cal-day.is-disabled:hover { background: transparent; border-color: var(--border-soft); }
+
+.ks-cal-day.is-holiday {
+  color: var(--accent2);
+  background: var(--accent2-soft);
+  border-color: var(--accent2-soft);
+  cursor: not-allowed;
+}
+.ks-cal-day.is-holiday:hover { background: var(--accent2-soft); border-color: var(--accent2-soft); }
+
+.ks-cal-day.is-requested {
+  color: var(--good);
+  background: var(--good-soft);
+  border-color: var(--good-soft);
+  cursor: not-allowed;
+}
+.ks-cal-day.is-requested:hover { background: var(--good-soft); border-color: var(--good-soft); }
+
+.ks-cal-day.is-selected,
+.ks-cal-day.is-selected:hover {
+  color: #fff;
+  background: var(--navy);
+  border-color: var(--navy);
+}
+
+/* --- selección y envío --- */
+
+.ks-vac-selection {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.ks-vac-selection-text { color: var(--ink); font-weight: 600; margin-bottom: 10px; }
+.ks-vac-selection-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+.ks-vac-btn {
+  border: 1px solid var(--navy);
+  background: var(--navy);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ks-vac-btn:disabled { opacity: .6; cursor: progress; }
+.ks-vac-btn-ghost { background: var(--card); color: var(--ink); border-color: var(--border); }
+
+.ks-vac-message { margin-top: 12px; font-weight: 600; color: var(--good); }
+.ks-vac-message.is-error { color: var(--accent2); }

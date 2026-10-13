@@ -1,0 +1,152 @@
+/* Estilos de la página de Incidencias (se carga junto con vacations.css, de donde vienen
+   las variables, .card-ks, .ks-vac-* y los botones). Prefijo ks-inc-. */
+
+.ks-inc-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 24px;
+  margin-top: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .ks-inc-grid { grid-template-columns: 1fr; }
+}
+
+.ks-inc-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-dim);
+  margin-bottom: 8px;
+}
+.ks-inc-optional { font-weight: 500; color: var(--ink-faint); }
+
+/* --- selector de tipo --- */
+
+.ks-inc-types {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.ks-inc-type {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.ks-inc-type:hover { background: var(--border-soft); }
+.ks-inc-type:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.ks-inc-type-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ks-inc-type-icon svg { width: 16px; height: 16px; }
+
+.ks-inc-type-name { font-size: 0.85rem; font-weight: 700; line-height: 1.2; }
+.ks-inc-type-hint { font-size: 0.72rem; color: var(--ink-faint); margin-top: 2px; line-height: 1.25; }
+
+.ks-inc-type.is-selected { background: var(--navy); border-color: var(--navy); color: #fff; }
+.ks-inc-type.is-selected .ks-inc-type-icon { background: rgba(255, 255, 255, .14); color: #fff; }
+.ks-inc-type.is-selected .ks-inc-type-hint { color: rgba(255, 255, 255, .7); }
+
+/* --- campos --- */
+
+.ks-inc-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.ks-inc-field { display: block; margin-bottom: 14px; }
+.ks-inc-fields .ks-inc-field { margin-bottom: 0; }
+.ks-inc-field[hidden] { display: none; }
+
+.ks-inc-field input,
+.ks-inc-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.ks-inc-field textarea { resize: vertical; min-height: 76px; }
+.ks-inc-field input:focus,
+.ks-inc-field textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+
+.ks-inc-counter { display: block; text-align: right; font-size: 0.72rem; color: var(--ink-faint); margin-top: 4px; }
+
+.ks-inc-summary {
+  margin: 0 0 14px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--border-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ks-inc-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+
+/* --- lista de solicitudes --- */
+
+.ks-inc-empty { font-size: 0.85rem; color: var(--ink-dim); margin: 0; line-height: 1.5; }
+
+.ks-inc-item {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--border-soft);
+}
+.ks-inc-item + .ks-inc-item { margin-top: 10px; }
+
+.ks-inc-item-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ks-inc-item-title { font-size: 0.9rem; font-weight: 700; color: var(--ink); }
+.ks-inc-item-when { font-size: 0.8rem; color: var(--ink-dim); margin-top: 4px; }
+.ks-inc-item-comment { font-size: 0.8rem; color: var(--ink-dim); margin-top: 6px; line-height: 1.4; word-break: break-word; }
+.ks-inc-item-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; font-size: 0.72rem; color: var(--ink-faint); }
+
+.ks-inc-badge {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--ink-dim);
+}
+.ks-inc-badge.is-proceso { background: var(--accent-soft); color: var(--accent-dark); }
+.ks-inc-badge.is-aceptada { background: var(--good-soft); color: var(--good); }
+.ks-inc-badge.is-cancelada { background: var(--accent2-soft); color: var(--accent2); }
+
+.ks-inc-cancel {
+  border: 0;
+  background: transparent;
+  color: var(--accent2);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.ks-inc-cancel:hover { text-decoration: underline; }
+.ks-inc-cancel:disabled { opacity: .5; cursor: progress; }

@@ -1,25 +1,41 @@
-function toggleDropdown(id, others) {
-  const el = document.getElementById(id);
-  const willOpen = !el.classList.contains("open");
-  others.forEach((o) => document.getElementById(o).classList.remove("open"));
-  el.classList.toggle("open", willOpen);
+// Paneles desplegables del encabezado: botón -> panel. Solo uno abierto a la vez.
+const PANELS = { bellBtn: "bellPanel", avatarBtn: "userPanel", appsBtn: "appsPanel", themeBtn: "themePanel" };
+
+function setPanel(btnId, open) {
+  document.getElementById(PANELS[btnId]).classList.toggle("open", open);
+  document.getElementById(btnId).setAttribute("aria-expanded", String(open));
 }
 
-document.getElementById("bellBtn").addEventListener("click", (e) => {
-  e.stopPropagation();
-  toggleDropdown("bellPanel", ["userPanel"]);
+function closePanels(exceptBtnId) {
+  Object.keys(PANELS).forEach((btnId) => { if (btnId !== exceptBtnId) setPanel(btnId, false); });
+}
+
+Object.entries(PANELS).forEach(([btnId, panelId]) => {
+  document.getElementById(btnId).addEventListener("click", (e) => {
+    e.stopPropagation();
+    const willOpen = !document.getElementById(panelId).classList.contains("open");
+    closePanels(btnId);
+    setPanel(btnId, willOpen);
+  });
 });
-document.getElementById("avatarBtn").addEventListener("click", (e) => {
-  e.stopPropagation();
-  toggleDropdown("userPanel", ["bellPanel"]);
-});
+
+// Dentro de los paneles de apps y de colores se puede hacer clic sin que se cierren.
+["appsPanel", "themePanel"].forEach((id) =>
+  document.getElementById(id).addEventListener("click", (e) => e.stopPropagation())
+);
+document.getElementById("appsClose").addEventListener("click", () => closePanels());
+
 document.getElementById("userNotifItem").addEventListener("click", () => {
-  document.getElementById("userPanel").classList.remove("open");
-  document.getElementById("bellPanel").classList.add("open");
+  closePanels();
+  setPanel("bellBtn", true);
 });
-document.addEventListener("click", () => {
-  document.getElementById("bellPanel").classList.remove("open");
-  document.getElementById("userPanel").classList.remove("open");
+document.addEventListener("click", () => closePanels());
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  const open = Object.keys(PANELS).find((btnId) => document.getElementById(PANELS[btnId]).classList.contains("open"));
+  if (!open) return;
+  closePanels();
+  document.getElementById(open).focus();
 });
 
 // Los mensajes vienen de la BD: se escapan antes de insertarlos como HTML.
