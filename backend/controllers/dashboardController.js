@@ -1,0 +1,10 @@
+const dashboardModel = require("../models/dashboardModel");
+
+// GET /api/dashboard
+async function index(req, res) {
+  const modules = dashboardModel.getModules();
+  const employeeCount = await dashboardModel.countActiveEmployees();
+  res.json({ modules, employeeCount });
+}
+
+module.exports = { index };

@@ -1,0 +1,382 @@
+// "Mi Avatar": pinta la página con GET /api/avatar[/:id] y activa el editor visual (canvas).
+(async function () {
+  const { esc } = Portal;
+  await Portal.requireSession();
+
+  const id = new URLSearchParams(location.search).get("id");
+  const res = await Portal.get("/avatar" + (id ? "/" + encodeURIComponent(id) : ""));
+  const app = document.getElementById("app");
+  if (!res.ok) {
+    app.innerHTML = '<p style="padding:40px;">' + esc((res.data && res.data.error) || "No se pudo cargar tu avatar.") + "</p>";
+    return;
+  }
+
+  const model = res.data;
+  document.title = "Mi Avatar · " + model.employeeName + " — Portal Eslabon";
+
+  // ---- HTML ----
+  const contextItems = model.contextItems.map((item) => `
+        <div class="av-context-item">
+          <div class="av-context-icon"><svg class="ks-icon" viewBox="0 0 24 24">${item.iconSvg}</svg></div>
+          <div>
+            <div class="av-context-title">${esc(item.title)}</div>
+            <div class="av-context-desc">${esc(item.description)}</div>
+          </div>
+        </div>`).join("");
+
+  // Paneles de estilo: misma estructura para cabello, rostro, ropa y accesorios.
+  const stylePanels = [
+    { id: "panel-hair", category: "hairStyle", options: model.hairStyles, active: true },
+    { id: "panel-face", category: "faceStyle", options: model.faceStyles },
+    { id: "panel-clothing", category: "clothingStyle", options: model.clothingStyles },
+    { id: "panel-accessories", category: "accessoryStyle", options: model.accessoryStyles },
+  ];
+  const colorGroups = [
+    { label: "Tono de piel", category: "skinTone", colors: model.skinTones },
+    { label: "Color de cabello", category: "hairColor", colors: model.hairColors },
+    { label: "Color de ropa", category: "clothingColor", colors: model.clothingColors },
+  ];
+
+  const stylePanelsHtml = stylePanels.map((panel) => `
+      <div class="av-editor-panel${panel.active ? " active" : ""}" id="${panel.id}">
+        <div class="ks-hat-row">${panel.options.map((opt) => `
+          <button type="button" class="ks-hat-btn${opt.key === model.currentAvatar[panel.category] ? " active" : ""}"
+                  data-category="${panel.category}" data-value="${esc(opt.key)}">${esc(opt.label)}</button>`).join("")}
+        </div>
+      </div>`).join("");
+
+  const colorGroupsHtml = colorGroups.map((group) => `
+        <div class="av-color-group">
+          <div class="av-color-label">${group.label}</div>
+          <div class="ks-swatch-row" style="justify-content:flex-start;">${group.colors.map((color) => `
+            <div class="ks-swatch${color === model.currentAvatar[group.category] ? " active" : ""}"
+                 style="background:${esc(color)};" data-category="${group.category}" data-value="${esc(color)}"></div>`).join("")}
+          </div>
+        </div>`).join("");
+
+  app.innerHTML = `
+<div class="ks-topbar">
+  <a class="ks-brand" style="text-decoration:none;" href="dashboard.html">
+    <div class="ks-brand-mark">E</div>
+    <span>Eslabón</span>
+    <span style="opacity:.5; font-weight:500; font-size:13px; margin-left:4px;">· Mi Avatar</span>
+  </a>
+  <div class="ks-top-actions">
+    <button class="ks-icon-btn" title="Ayuda">
+      <svg class="ks-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.7-2.5 2-2.5 3.5" /><path d="M12 17h.01" /></svg>
+    </button>
+    <button class="ks-lang-btn">ES</button>
+    <button class="ks-icon-btn">
+      <svg class="ks-icon" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 4 2 5 2 5H4s2-1 2-5Z" /></svg>
+    </button>
+    <div class="ks-user-chip">
+      <canvas id="topbarAvatar" width="30" height="30" style="border-radius:50%;"></canvas>
+      <div>
+        <p class="ks-user-name">${esc(model.employeeName)}</p>
+        <p class="ks-user-role">${esc(model.employeeRole)}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-container">
+
+  <div class="av-header">
+    <div class="av-eyebrow">Capital Humano · Mi Perfil</div>
+    <h1 class="page-title">Mi Avatar</h1>
+    <p class="page-subtitle">Personaliza tu representación visual dentro de Eslabón.</p>
+  </div>
+
+  <div class="ks-profile-wrap">
+
+    <!-- ============ LEFT COLUMN ============ -->
+    <div>
+      <div class="card-ks" style="text-align:center; margin-bottom:18px;">
+        <canvas id="avatarPreview" class="av-preview-canvas" width="200" height="200"></canvas>
+        <div class="av-preview-name">${esc(model.employeeName)}</div>
+        <div class="av-preview-role">${esc(model.employeeRole)}</div>
+        <div class="av-preview-meta"><span class="ks-tag ks-tag-wellness">${esc(model.statusLabel)}</span></div>
+        <div class="av-last-edited" id="avLastEdited">${esc(model.lastEditedText)}</div>
+      </div>
+
+      <div class="card-ks">
+        <h3 style="font-size:0.95rem; margin-bottom:4px;">¿Dónde aparece tu avatar?</h3>
+        <p style="font-size:0.78rem; color:var(--ink-dim); margin-bottom:6px;">Presencia en el portal empresarial</p>${contextItems}
+      </div>
+    </div>
+
+    <!-- ============ RIGHT COLUMN: EDITOR ============ -->
+    <div class="card-ks">
+      <div class="av-editor-head">
+        <h2 class="av-editor-title">Editor de avatar</h2>
+        <p class="av-editor-sub">Elige cabello, rostro, ropa, accesorios y colores. Los cambios se ven al instante en la vista previa.</p>
+      </div>
+
+      <div class="ks-tabs">
+        <div class="ks-tab active" data-target="panel-hair">Cabello</div>
+        <div class="ks-tab" data-target="panel-face">Rostro</div>
+        <div class="ks-tab" data-target="panel-clothing">Ropa</div>
+        <div class="ks-tab" data-target="panel-accessories">Accesorios</div>
+        <div class="ks-tab" data-target="panel-colors">Colores</div>
+      </div>
+${stylePanelsHtml}
+      <div class="av-editor-panel" id="panel-colors">${colorGroupsHtml}
+      </div>
+
+      <div class="av-actions-bar">
+        <button type="button" class="btn-ks btn-ks-ghost" id="avCancel">Cancelar</button>
+        <button type="button" class="btn-ks btn-ks-primary" id="avSave">Guardar cambios</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="ks-toast" id="avToast">Avatar actualizado</div>`;
+
+  // ---- Editor (canvas) ----
+  const savedConfig = model.currentAvatar;
+
+  let saved = { ...savedConfig };
+  let current = { ...savedConfig };
+
+  /* ---------- drawing ---------- */
+
+  function drawClothing(ctx, r, style, color) {
+      ctx.fillStyle = color;
+      const topY = r * 0.28, bottomY = r * 0.98;
+      const topW = r * 0.32, botW = r * 0.9;
+      ctx.beginPath();
+      ctx.moveTo(-topW, topY);
+      ctx.quadraticCurveTo(-botW * 1.05, topY + (bottomY - topY) * 0.35, -botW, bottomY);
+      ctx.lineTo(botW, bottomY);
+      ctx.quadraticCurveTo(botW * 1.05, topY + (bottomY - topY) * 0.35, topW, topY);
+      ctx.closePath();
+      ctx.fill();
+
+      if (style === "shirt") {
+          ctx.strokeStyle = "rgba(255,255,255,0.85)";
+          ctx.lineWidth = Math.max(1.5, r * 0.03);
+          ctx.beginPath();
+          ctx.moveTo(-topW * 0.7, topY + 2);
+          ctx.lineTo(0, topY + r * 0.22);
+          ctx.lineTo(topW * 0.7, topY + 2);
+          ctx.stroke();
+      } else if (style === "blazer") {
+          ctx.fillStyle = "rgba(0,0,0,0.18)";
+          ctx.beginPath();
+          ctx.moveTo(-topW * 0.6, topY);
+          ctx.lineTo(-botW * 0.25, bottomY);
+          ctx.lineTo(-topW * 0.1, topY + r * 0.2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(topW * 0.6, topY);
+          ctx.lineTo(botW * 0.25, bottomY);
+          ctx.lineTo(topW * 0.1, topY + r * 0.2);
+          ctx.closePath();
+          ctx.fill();
+      } else if (style === "hoodie") {
+          ctx.strokeStyle = "rgba(255,255,255,0.85)";
+          ctx.lineWidth = Math.max(1.5, r * 0.025);
+          ctx.beginPath();
+          ctx.moveTo(-topW * 0.3, topY + 2); ctx.lineTo(-topW * 0.3, topY + r * 0.3);
+          ctx.moveTo(topW * 0.3, topY + 2); ctx.lineTo(topW * 0.3, topY + r * 0.3);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.ellipse(0, topY, topW * 0.75, r * 0.12, 0, 0, Math.PI);
+          ctx.stroke();
+      }
+  }
+
+  function drawHair(ctx, r, cy, rx, ry, style, color) {
+      if (style === "none") return;
+      ctx.fillStyle = color;
+      if (style === "short") {
+          ctx.beginPath();
+          ctx.ellipse(0, cy - ry * 0.55, rx * 1.02, ry * 0.62, 0, Math.PI, Math.PI * 2);
+          ctx.fill();
+      } else if (style === "long") {
+          ctx.beginPath();
+          ctx.ellipse(0, cy - ry * 0.5, rx * 1.05, ry * 0.62, 0, Math.PI, Math.PI * 2);
+          ctx.fill();
+          ctx.fillRect(-rx * 1.02, cy - ry * 0.1, rx * 0.3, ry * 1.6);
+          ctx.fillRect(rx * 0.72, cy - ry * 0.1, rx * 0.3, ry * 1.6);
+      } else if (style === "curly") {
+          for (let i = -3; i <= 3; i++) {
+              ctx.beginPath();
+              ctx.arc(i * rx * 0.32, cy - ry * 0.6, rx * 0.32, 0, Math.PI * 2);
+              ctx.fill();
+          }
+      } else if (style === "buzz") {
+          ctx.globalAlpha = 0.55;
+          ctx.beginPath();
+          ctx.ellipse(0, cy - ry * 0.6, rx * 0.98, ry * 0.45, 0, Math.PI, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+      } else if (style === "ponytail") {
+          ctx.beginPath();
+          ctx.ellipse(0, cy - ry * 0.55, rx * 1.0, ry * 0.6, 0, Math.PI, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(rx * 1.05, cy - ry * 0.05, rx * 0.22, ry * 0.55, 0.4, 0, Math.PI * 2);
+          ctx.fill();
+      }
+  }
+
+  function drawFace(ctx, r, cy, rx, ry, style) {
+      const eyeY = cy - ry * 0.05;
+      const eyeX = rx * 0.42;
+      const eyeR = Math.max(1.6, r * 0.045);
+
+      ctx.fillStyle = "rgba(20,15,10,0.85)";
+
+      if (style === "surprised") {
+          ctx.beginPath(); ctx.arc(-eyeX, eyeY, eyeR * 1.3, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(eyeX, eyeY, eyeR * 1.3, 0, Math.PI * 2); ctx.fill();
+      } else if (style === "serious") {
+          ctx.beginPath(); ctx.arc(-eyeX, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(eyeX, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = "rgba(20,15,10,0.8)";
+          ctx.lineWidth = Math.max(1.4, r * 0.035);
+          ctx.beginPath(); ctx.moveTo(-eyeX - eyeR * 1.6, eyeY - eyeR * 2.2); ctx.lineTo(-eyeX + eyeR * 1.4, eyeY - eyeR * 1.2); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(eyeX + eyeR * 1.6, eyeY - eyeR * 2.2); ctx.lineTo(eyeX - eyeR * 1.4, eyeY - eyeR * 1.2); ctx.stroke();
+      } else {
+          ctx.beginPath(); ctx.arc(-eyeX, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(eyeX, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+      }
+
+      ctx.strokeStyle = "rgba(20,15,10,0.75)";
+      ctx.lineWidth = Math.max(1.4, r * 0.045);
+      ctx.lineCap = "round";
+      const mouthY = cy + ry * 0.42;
+      ctx.beginPath();
+      if (style === "happy") {
+          ctx.arc(0, mouthY - ry * 0.12, rx * 0.32, 0.15 * Math.PI, 0.85 * Math.PI);
+      } else if (style === "serious") {
+          ctx.moveTo(-rx * 0.22, mouthY);
+          ctx.lineTo(rx * 0.22, mouthY);
+      } else if (style === "surprised") {
+          ctx.arc(0, mouthY, rx * 0.14, 0, Math.PI * 2);
+      } else {
+          ctx.arc(0, mouthY - ry * 0.5, rx * 0.32, 0.35 * Math.PI, 0.65 * Math.PI);
+      }
+      ctx.stroke();
+  }
+
+  function drawAccessory(ctx, r, cy, rx, ry, style) {
+      if (style === "glasses") {
+          const eyeY = cy - ry * 0.05, eyeX = rx * 0.42, lensR = r * 0.16;
+          ctx.strokeStyle = "#12142B";
+          ctx.lineWidth = Math.max(1.6, r * 0.035);
+          ctx.beginPath(); ctx.arc(-eyeX, eyeY, lensR, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(eyeX, eyeY, lensR, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(-eyeX + lensR, eyeY); ctx.lineTo(eyeX - lensR, eyeY); ctx.stroke();
+      } else if (style === "cap") {
+          ctx.fillStyle = "#12142B";
+          ctx.beginPath();
+          ctx.ellipse(0, cy - ry * 0.62, rx * 1.05, ry * 0.5, 0, Math.PI, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(rx * 0.35, cy - ry * 0.32, rx * 0.6, ry * 0.15, -0.15, 0, Math.PI);
+          ctx.fill();
+      } else if (style === "earrings") {
+          ctx.fillStyle = "#C89B4A";
+          ctx.beginPath(); ctx.arc(-rx * 0.98, cy + ry * 0.28, r * 0.03, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(rx * 0.98, cy + ry * 0.28, r * 0.03, 0, Math.PI * 2); ctx.fill();
+      }
+  }
+
+  function drawAvatar(canvas, cfg) {
+      const ctx = canvas.getContext("2d");
+      const w = canvas.width, h = canvas.height, r = w / 2;
+      ctx.clearRect(0, 0, w, h);
+      ctx.save();
+      ctx.translate(r, r);
+
+      const headCy = -r * 0.18, headRx = r * 0.44, headRy = r * 0.5;
+
+      drawClothing(ctx, r, cfg.clothingStyle, cfg.clothingColor);
+
+      ctx.fillStyle = cfg.skinTone;
+      ctx.fillRect(-r * 0.12, headCy + headRy * 0.55, r * 0.24, r * 0.35);
+
+      ctx.fillStyle = cfg.skinTone;
+      ctx.beginPath();
+      ctx.ellipse(-headRx * 0.98, headCy, r * 0.06, r * 0.09, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(headRx * 0.98, headCy, r * 0.06, r * 0.09, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(0, headCy, headRx, headRy, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawHair(ctx, r, headCy, headRx, headRy, cfg.hairStyle, cfg.hairColor);
+      drawFace(ctx, r, headCy, headRx, headRy, cfg.faceStyle);
+      drawAccessory(ctx, r, headCy, headRx, headRy, cfg.accessoryStyle);
+
+      ctx.restore();
+  }
+
+  /* ---------- wiring ---------- */
+
+  const previewCanvas = document.getElementById("avatarPreview");
+  const topbarCanvas = document.getElementById("topbarAvatar");
+  const toast = document.getElementById("avToast");
+  const lastEditedEl = document.getElementById("avLastEdited");
+  let toastTimer;
+
+  function render() {
+      drawAvatar(previewCanvas, current);
+  }
+
+  function showToast(text) {
+      toast.textContent = text;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+  }
+
+  function syncControls(cfg) {
+      document.querySelectorAll("[data-category]").forEach(el => {
+          const cat = el.dataset.category;
+          el.classList.toggle("active", el.dataset.value === cfg[cat]);
+      });
+  }
+
+  // tabs
+  document.querySelectorAll(".ks-tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+          document.querySelectorAll(".ks-tab").forEach(t => t.classList.remove("active"));
+          document.querySelectorAll(".av-editor-panel").forEach(p => p.classList.remove("active"));
+          tab.classList.add("active");
+          document.getElementById(tab.dataset.target).classList.add("active");
+      });
+  });
+
+  // style pills + color swatches (share the same data-category / data-value contract)
+  document.querySelectorAll("[data-category]").forEach(el => {
+      el.addEventListener("click", () => {
+          const cat = el.dataset.category;
+          current[cat] = el.dataset.value;
+          document.querySelectorAll('[data-category="' + cat + '"]').forEach(sib => sib.classList.remove("active"));
+          el.classList.add("active");
+          render();
+      });
+  });
+
+  document.getElementById("avSave").addEventListener("click", () => {
+      saved = { ...current };
+      lastEditedEl.textContent = "Última edición: justo ahora";
+      showToast("Avatar actualizado");
+  });
+
+  document.getElementById("avCancel").addEventListener("click", () => {
+      current = { ...saved };
+      syncControls(current);
+      render();
+      showToast("Cambios descartados");
+  });
+
+  drawAvatar(topbarCanvas, saved);
+  render();
+})();
