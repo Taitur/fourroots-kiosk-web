@@ -57,7 +57,9 @@ Todo cuelga de `/api`. Las peticiones que modifican datos exigen sesión y la ca
 | `GET /api/auth/csrf` · `GET /api/auth/session` | Token CSRF · usuario de la sesión (401 si no hay) |
 | `POST /api/auth/login` · `POST /api/auth/logout` | `{ username, password, rememberMe }` |
 | `GET /api/dashboard` | Módulos, apps (`page` = página del frontend) y nº de empleados |
-| `GET /api/attendance[/:id]` · `GET /api/avatar[/:id]` | Ficha de asistencia y avatar (datos de ejemplo) |
+| `GET /api/attendance` | Ficha de asistencia del usuario en sesión (antigüedad y ascensos reales; faltas/tardanzas en 0 hasta que exista un Kardex real) |
+| `GET /api/avatar[/:id]` | Avatar y catálogos del editor (datos de ejemplo; no hay tabla de avatar en la BD) |
+| `GET /api/engage` | Feed, encuestas, aplausos y cumpleaños de la comunidad |
 | `GET /api/vacations` · `POST /api/vacations/requests` | Saldo y calendario · solicitar días `{ days: ["YYYY-MM-DD"] }` |
 | `GET /api/incidences` · `POST /api/incidences/requests` · `POST /api/incidences/requests/:id/cancel` | Permisos |
 | `GET /api/notifications` · `PATCH /api/notifications/read-all` · `PATCH /api/notifications/:id/read` | Bandeja del usuario |

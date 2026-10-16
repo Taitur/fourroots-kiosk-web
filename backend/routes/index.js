@@ -1,6 +1,7 @@
 const express = require("express");
 
 const requireAuth = require("../middleware/requireAuth");
+const requireAdmin = require("../middleware/requireAdmin");
 const csrf = require("../middleware/csrf");
 
 const auth = require("../controllers/authController");
@@ -10,6 +11,8 @@ const avatar = require("../controllers/avatarController");
 const vacations = require("../controllers/vacationsController");
 const incidences = require("../controllers/incidencesController");
 const notifications = require("../controllers/notificationsController");
+const engage = require("../controllers/engageController");
+const users = require("../controllers/userController");
 
 const router = express.Router();
 const juegoRoutes = require("./juegos");   // el nombre de tu archivo nuevo, sin .js
@@ -30,8 +33,11 @@ router.post("/auth/logout", csrf.verifyToken, auth.logout);
 router.get("/dashboard", requireAuth, dashboard.index);
 
 // ---- Asistencia y avatar ----
-router.get("/attendance{/:id}", requireAuth, attendance.index);
+router.get("/attendance", requireAuth, attendance.index);
 router.get("/avatar{/:id}", requireAuth, avatar.index);
+
+// ---- Engage (comunidad) ----
+router.get("/engage", requireAuth, engage.index);
 
 // ---- Vacaciones ----
 router.get("/vacations", requireAuth, vacations.index);
@@ -46,5 +52,11 @@ router.post("/incidences/requests/:id/cancel", requireAuth, csrf.verifyToken, in
 router.get("/notifications", requireAuth, notifications.list);
 router.patch("/notifications/read-all", requireAuth, csrf.verifyToken, notifications.markAllRead);
 router.patch("/notifications/:id/read", requireAuth, csrf.verifyToken, notifications.markRead);
+
+// ---- Usuarios (alta, baja y cambios) — solo Administrador ----
+router.get("/users", requireAuth, requireAdmin, users.list);
+router.post("/users", requireAuth, requireAdmin, csrf.verifyToken, users.create);
+router.patch("/users/:id", requireAuth, requireAdmin, csrf.verifyToken, users.update);
+router.delete("/users/:id", requireAuth, requireAdmin, csrf.verifyToken, users.remove);
 
 module.exports = router;

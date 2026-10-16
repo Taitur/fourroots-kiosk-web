@@ -34,7 +34,7 @@ async function login(req, res, next) {
   }
 
   // Se regenera la sesión al iniciar sesión para evitar fijación de sesión.
-  req.session.regenerate((err) => {
+  req.session.regenerate(async (err) => {
     if (err) return next(err);
     req.session.user = {
       id: user.id,
@@ -47,6 +47,13 @@ async function login(req, res, next) {
     };
     // "Mantener sesión": cookie de 30 días; si no, dura lo que la sesión (2 h de inactividad).
     if (body.rememberMe) req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
+
+    try {
+      await userModel.updateLoginTimestamp(user.id);
+    } catch (e) {
+      console.error("No se pudo actualizar dtFechaRegistro:", e.message);
+    }
+
     // La sesión nueva tiene su propio token CSRF: se devuelve para que el cliente lo actualice.
     res.json({ user: req.session.user, csrfToken: ensureToken(req) });
   });

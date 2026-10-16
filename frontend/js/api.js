@@ -63,6 +63,7 @@
     get: (path) => request("GET", path),
     post: (path, body) => request("POST", path, body === undefined ? {} : body),
     patch: (path, body) => request("PATCH", path, body === undefined ? {} : body),
+    del: (path, body) => request("DELETE", path, body === undefined ? {} : body),
     setCsrf: (token) => { csrfToken = token; },
     requireSession,
     logout,
