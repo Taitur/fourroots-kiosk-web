@@ -1,11 +1,9 @@
-// Ficha de asistencia: pinta la página con los datos de GET /api/attendance[/:id].
+// Ficha de asistencia: pinta la página con los datos de GET /api/attendance.
 (async function () {
   const { esc } = Portal;
   const user = await Portal.requireSession();
 
-  // /attendance.html?id=EMP-4821
-  const id = new URLSearchParams(location.search).get("id");
-  const res = await Portal.get("/attendance" + (id ? "/" + encodeURIComponent(id) : ""));
+  const res = await Portal.get("/attendance");
   const app = document.getElementById("app");
   if (!res.ok) {
     app.innerHTML = '<p style="padding:40px;">' + esc((res.data && res.data.error) || "No se pudo cargar la ficha.") + "</p>";
@@ -136,7 +134,7 @@
     <div class="dash-panel"><div class="dash-timeline">${timeline}</div></div>
 
     <footer class="dash-footer">
-      <p>Portal empresarial · Módulo de Nómina · Datos de ejemplo</p>
+      <p>Portal empresarial · Módulo de Nómina</p>
     </footer>
 
   </div>

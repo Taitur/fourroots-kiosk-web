@@ -46,8 +46,21 @@ const MODULES = [
   },
 ];
 
-function getModules() {
-  return MODULES;
+// La administración de usuarios solo se agrega al menú si el usuario en sesión es Administrador.
+function getModules(isAdmin) {
+  if (!isAdmin) return MODULES;
+  return [
+    ...MODULES,
+    {
+      id: "administracion",
+      title: "Administración",
+      description: "Gestión de accesos al portal",
+      icon: "admin_panel_settings",
+      apps: [
+        { id: "usuarios", name: "Usuarios", desc: "Alta, baja y cambios de usuarios", icon: "manage_accounts", page: "users" },
+      ],
+    },
+  ];
 }
 
 // Empleados dados de alta (sin fecha de baja).

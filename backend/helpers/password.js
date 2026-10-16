@@ -15,4 +15,14 @@ function verifyPassword(plainPassword, storedClave) {
   return expected.length === received.length && crypto.timingSafeEqual(expected, received);
 }
 
-module.exports = { verifyPassword };
+const CLAVE_LENGTH = 50;
+
+// Construye el valor binary(50) que espera kio_tbUsuarios.vcClave a partir de la contraseña
+// en texto plano (mismo relleno de ceros que lee verifyPassword).
+function buildClave(plainPassword) {
+  const bytes = Buffer.from(plainPassword, "latin1");
+  if (bytes.length >= CLAVE_LENGTH) return bytes.subarray(0, CLAVE_LENGTH);
+  return Buffer.concat([bytes, Buffer.alloc(CLAVE_LENGTH - bytes.length)]);
+}
+
+module.exports = { verifyPassword, buildClave };
