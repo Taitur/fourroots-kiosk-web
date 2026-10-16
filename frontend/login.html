@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Iniciar sesión — Portal Eslabon</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" />
+<link rel="stylesheet" href="css/styles.css" />
+<link rel="stylesheet" href="css/theme.css" />
+<script src="js/theme-init.js"></script>
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-panel">
+      <div class="brand"><span class="box">E</span> Eslabon</div>
+      <div>
+        <div class="quote">Portal Empresarial de Autoservicio</div>
+        <div class="quote-sub">Nómina, Capital Humano y Tiempo &amp; Accesos en un solo lugar.</div>
+      </div>
+      <div></div>
+    </div>
+    <div class="login-form-side">
+      <form class="login-form" id="loginForm" novalidate>
+        <h2>Bienvenido de nuevo</h2>
+        <p class="sub">Introduce tus credenciales para continuar</p>
+        <div class="error-login" id="loginError" role="alert" hidden></div>
+        <div class="campo">
+          <label for="username">Usuario</label>
+          <input type="text" id="username" name="Username" placeholder="usuario@empresa.com" autocomplete="username" />
+        </div>
+        <div class="campo">
+          <label for="password">Contraseña</label>
+          <div class="campo-pwd">
+            <input type="password" id="password" name="Password" placeholder="••••••••" autocomplete="current-password" />
+            <button type="button" id="togglePwd" aria-label="Mostrar u ocultar la contraseña"><span class="material-symbols-outlined" id="pwdIcon" style="font-size:18px;">visibility</span></button>
+          </div>
+        </div>
+        <div class="fila-opciones">
+          <label><input type="checkbox" id="rememberMe" name="RememberMe" /> Mantener sesión</label>
+          <a href="#">¿Olvidaste tu contraseña?</a>
+        </div>
+        <button type="submit" class="btn-login" id="loginBtn"><span class="material-symbols-outlined" style="font-size:18px;">login</span> Iniciar sesión</button>
+      </form>
+    </div>
+  </div>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>
