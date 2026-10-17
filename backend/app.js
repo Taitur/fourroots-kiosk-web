@@ -35,6 +35,8 @@ if (corsOrigins.length) {
   );
 }
 
+app.use("/api/dibujos", express.json({ limit: "5mb" }));   // el videojuego manda el PNG en base64
+
 app.use(express.json({ limit: "100kb" }));
 
 // ---- Sesión (en memoria, 2 h de inactividad) ----

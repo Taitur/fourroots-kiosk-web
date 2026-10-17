@@ -18,6 +18,9 @@ const router = express.Router();
 const juegoRoutes = require("./juegos");   // el nombre de tu archivo nuevo, sin .js
 router.use("/", juegoRoutes);
 
+const dibujoRoutes = require("./dibujos");
+router.use("/", dibujoRoutes);
+
 // Todas las rutas cuelgan de /api. Las que modifican datos exigen sesión y token CSRF
 // (cabecera X-CSRF-Token, obtenido en GET /api/auth/csrf).
 
