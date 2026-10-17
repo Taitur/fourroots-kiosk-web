@@ -38,6 +38,12 @@ router.get("/avatar{/:id}", requireAuth, avatar.index);
 
 // ---- Engage (comunidad) ----
 router.get("/engage", requireAuth, engage.index);
+router.post("/engage/news", requireAuth, csrf.verifyToken, engage.createNews);
+router.patch("/engage/news/:id", requireAuth, csrf.verifyToken, engage.updateNews);
+router.delete("/engage/news/:id", requireAuth, csrf.verifyToken, engage.deleteNews);
+router.post("/engage/surveys/:id/vote", requireAuth, csrf.verifyToken, engage.vote);
+router.post("/engage/kudos", requireAuth, csrf.verifyToken, engage.giveKudos);
+router.delete("/engage/kudos/:id", requireAuth, csrf.verifyToken, engage.deleteKudos);
 
 // ---- Vacaciones ----
 router.get("/vacations", requireAuth, vacations.index);
