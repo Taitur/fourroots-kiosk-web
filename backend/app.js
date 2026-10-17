@@ -29,7 +29,7 @@ if (corsOrigins.length) {
     cors({
       origin: corsOrigins,
       credentials: true,
-      methods: ["GET", "POST", "PATCH", "OPTIONS"],
+      methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "X-CSRF-Token"],
     })
   );
