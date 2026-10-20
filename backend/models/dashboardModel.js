@@ -44,6 +44,15 @@ const MODULES = [
       { id: "control-acceso", name: "Control de acceso", desc: "Entradas y salidas", icon: "badge", page: null },
     ],
   },
+  {
+    id: "juegos",
+    title: "Juegos",
+    description: "Minijuegos del Kiosco",
+    icon: "sports_esports",
+    apps: [
+      { id: "kiosco-juegos", name: "Menú de juegos", desc: "Todos los juegos del Kiosco", icon: "stadia_controller", page: "juegos" },
+    ],
+  },
 ];
 
 // La administración de usuarios solo se agrega al menú si el usuario en sesión es Administrador.

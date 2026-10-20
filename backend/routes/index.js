@@ -40,6 +40,12 @@ router.get("/dashboard", requireAuth, dashboard.index);
 
 // ---- Asistencia y avatar ----
 router.get("/attendance", requireAuth, attendance.index);
+// Solo Administrador: ver la ficha de cualquier colaborador (GET /attendance?employee=ID) y editar sus registros.
+router.get("/attendance/employees", requireAuth, requireAdmin, attendance.employees);
+router.get("/attendance/records", requireAuth, requireAdmin, attendance.records);
+router.patch("/attendance/records", requireAuth, requireAdmin, csrf.verifyToken, attendance.saveRecord);
+router.delete("/attendance/records", requireAuth, requireAdmin, csrf.verifyToken, attendance.removeRecord);
+router.patch("/attendance/promotions", requireAuth, requireAdmin, csrf.verifyToken, attendance.savePromotion);
 router.get("/avatar", requireAuth, avatar.index);
 router.patch("/avatar", requireAuth, csrf.verifyToken, avatar.save);
 
