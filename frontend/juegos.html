@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Juegos — Portal Eslabon</title>
+<link rel="stylesheet" href="css/vacations.css" />
+<link rel="stylesheet" href="css/juegos.css" />
+<link rel="stylesheet" href="css/theme.css" />
+<script src="js/theme-init.js"></script>
+<script src="js/guard-init.js"></script>
+</head>
+<body>
+
+<div class="page-container">
+
+  <a href="dashboard.html" style="display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:0.85rem; font-weight:600; margin-bottom:18px;">
+    <svg class="ks-icon" viewBox="0 0 24 24" style="width:16px; height:16px;"><path d="M15 18l-6-6 6-6"/></svg>
+    Volver al Dashboard
+  </a>
+
+  <h1 class="page-title">Juegos<br>del Kiosco</h1>
+  <p class="ks-vac-lead">Elige un juego desde el menú principal y gana puntos.</p>
+
+  <div class="card-ks ks-game-card">
+    <div class="ks-game-bar">
+      <span class="ks-game-points" id="gameStatus">Cargando juegos...</span>
+      <button type="button" class="ks-game-btn" id="gameFull">Pantalla completa</button>
+    </div>
+    <div class="ks-game-frame" id="gameFrameWrap">
+      <iframe id="gameFrame" title="Menú principal de juegos" allow="fullscreen; autoplay" hidden></iframe>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/juegos.js"></script>
+</body>
+</html>
