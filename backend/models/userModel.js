@@ -150,15 +150,22 @@ async function updateUser(id, { username, password, employeeId, companyId, activ
   return { ok: true };
 }
 
-// Baja lógica: no se borra la fila, se marca bBorrado (igual que bBorradoReceptor en mensajes).
+// Borrado físico: elimina la fila de kio_tbUsuarios.
 async function deleteUser(id) {
   const pool = await getConnection();
-  const result = await pool
-    .request()
-    .input("id", sql.Int, id)
-    .query(`UPDATE kio_tbUsuarios SET bBorrado = 1, bActivo = 0, dtFechaModificacion = GETDATE() WHERE iIdUsuario = @id AND bBorrado = 0`);
-  if (result.rowsAffected[0] === 0) return { ok: false, error: "Usuario no encontrado." };
-  return { ok: true };
+  try {
+    const result = await pool
+      .request()
+      .input("id", sql.Int, id)
+      .query(`DELETE FROM kio_tbUsuarios WHERE iIdUsuario = @id`);
+    if (result.rowsAffected[0] === 0) return { ok: false, error: "Usuario no encontrado." };
+    return { ok: true };
+  } catch (err) {
+    if (err.number === 547) {
+      return { ok: false, error: "No se puede eliminar: el usuario tiene registros relacionados (asistencia, vacaciones, etc.)." };
+    }
+    throw err;
+  }
 }
 
 module.exports = { findByUsername, updateLoginTimestamp, listUsers, createUser, updateUser, deleteUser };

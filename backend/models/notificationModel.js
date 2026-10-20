@@ -65,4 +65,54 @@ function relativeTime(date) {
   return new Date(date).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" });
 }
 
-module.exports = { getForUser, markRead, markAllRead };
+// Id(s) del usuario Administrador (parámetro KIOSKO.USUARIO_ADMINISTRADOR).
+async function getAdminIds() {
+  const pool = await getConnection();
+  const result = await pool.request().query(`
+    SELECT TOP 1 valor FROM parametros
+    WHERE grupo = 'KIOSKO' AND variable = 'USUARIO_ADMINISTRADOR'`);
+
+  const id = result.recordset[0] && Number(result.recordset[0].valor);
+  return Number.isInteger(id) ? [id] : [];
+}
+
+// Envía un mensaje/notificación a un usuario. kio_tbMensajes no tiene IDENTITY: se toma
+// el siguiente id bajo bloqueo, como en el resto de tablas heredadas del sistema original.
+async function notify(receptorId, emisorId, titulo, texto) {
+  const pool = await getConnection();
+  const tx = new sql.Transaction(pool);
+  await tx.begin();
+  try {
+    const next = await new sql.Request(tx).query(
+      `SELECT ISNULL(MAX(iIdMensaje), 0) + 1 AS id FROM kio_tbMensajes WITH (UPDLOCK, HOLDLOCK)`
+    );
+    const id = next.recordset[0].id;
+
+    await new sql.Request(tx)
+      .input("id", sql.Int, id)
+      .input("receptor", sql.Int, receptorId)
+      .input("emisor", sql.Int, emisorId)
+      .input("titulo", sql.NVarChar(200), titulo)
+      .input("texto", sql.NVarChar(sql.MAX), texto)
+      .query(`
+        INSERT INTO kio_tbMensajes
+          (iIdMensaje, iIdUsuario, iIdUsuarioReceptor, iIdUsuarioEmisor, vcTitulo, tTexto,
+           dtFechaEnvio, dtFechaRegistro, bLeido, bEnviado, bUrgente, bBorradoEmisor, bBorradoReceptor)
+        VALUES (@id, @receptor, @receptor, @emisor, @titulo, @texto,
+                GETDATE(), GETDATE(), 0, 1, 0, 0, 0)`);
+
+    await tx.commit();
+  } catch (err) {
+    await tx.rollback().catch(() => {});
+    throw err;
+  }
+}
+
+// Envía el mismo mensaje a varios destinatarios (p.ej. a todos los administradores).
+async function notifyMany(receptorIds, emisorId, titulo, texto) {
+  for (const receptorId of receptorIds) {
+    await notify(receptorId, emisorId, titulo, texto);
+  }
+}
+
+module.exports = { getForUser, markRead, markAllRead, getAdminIds, notify, notifyMany };

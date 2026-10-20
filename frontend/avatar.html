@@ -6,6 +6,7 @@
 <title>Mi Avatar — Portal Eslabon</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" />
+<link rel="stylesheet" href="css/styles.css" />
 <link rel="stylesheet" href="css/designSystem.css" />
 <link rel="stylesheet" href="css/avatar.css" />
 <link rel="stylesheet" href="css/theme.css" />
@@ -13,10 +14,83 @@
 <script src="js/guard-init.js"></script>
 </head>
 <body>
+  <header class="header" data-no-read>
+    <div class="header-inner">
+      <div class="brand">
+        <span class="box"><span class="material-symbols-outlined" style="font-size:17px; color:#fff;">bolt</span></span>
+        <span class="name">Eslabon</span>
+      </div>
+      <div class="header-right">
+        <button class="icon-btn" id="narrateBtn" type="button" title="Leer la página en voz alta" aria-label="Leer la página en voz alta" aria-pressed="false"><span class="material-symbols-outlined" id="narrateIcon" style="font-size:18px;">volume_off</span></button>
+
+        <div class="dropdown-wrap">
+          <button class="icon-btn" id="themeBtn" type="button" title="Personalizar colores" aria-label="Personalizar colores" aria-haspopup="true" aria-expanded="false" aria-controls="themePanel"><span class="material-symbols-outlined" style="font-size:18px;">palette</span></button>
+          <div class="dropdown-panel theme-panel" id="themePanel" role="dialog" aria-label="Personalizar portal">
+            <div class="dropdown-head"><p style="font-size:15px;">Personalizar portal</p><span style="font-size:13px;">Selecciona un tema de color</span></div>
+            <div class="panel-section">
+              <p class="panel-section-title">Temas</p>
+              <div class="theme-swatches" id="themeSwatches"></div>
+              <p class="panel-section-title">Accesibilidad · Daltonismo</p>
+              <div class="theme-cb-list" id="themeCbList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dropdown-wrap">
+          <button class="icon-btn" id="appsBtn" type="button" title="Navegar entre aplicaciones" aria-label="Navegar entre aplicaciones" aria-haspopup="true" aria-expanded="false" aria-controls="appsPanel"><span class="material-symbols-outlined" style="font-size:18px;">space_dashboard</span></button>
+          <div class="dropdown-panel apps-panel" id="appsPanel" role="dialog" aria-label="Aplicaciones">
+            <div class="dropdown-head apps-panel-head">
+              <p style="font-size:15px;">Aplicaciones</p>
+              <button class="apps-panel-close" id="appsClose" type="button" aria-label="Cerrar"><span class="material-symbols-outlined" style="font-size:20px;">close</span></button>
+            </div>
+            <div class="apps-panel-body" id="appsBody"></div>
+          </div>
+        </div>
+        <div class="divider"></div>
+
+        <div class="dropdown-wrap">
+          <button class="icon-btn" id="bellBtn" type="button" title="Notificaciones" aria-haspopup="true" aria-expanded="false">
+            <span class="material-symbols-outlined" style="font-size:18px;">notifications</span>
+            <span class="badge-dot" id="bellBadge" style="display:none;"></span>
+          </button>
+          <div class="dropdown-panel" id="bellPanel">
+            <div class="dropdown-head" style="display:flex; align-items:center; justify-content:space-between;">
+              <div><p>Notificaciones</p><span id="unreadLabel"></span></div>
+              <a href="#" id="markAllRead" style="font-size:12px; font-weight:600;">Marcar leídas</a>
+            </div>
+            <div id="notifList"></div>
+          </div>
+        </div>
+
+        <div class="dropdown-wrap">
+          <button class="user-block" id="avatarBtn" type="button" aria-haspopup="true" aria-expanded="false">
+            <span class="avatar" id="userInitials"></span>
+            <canvas class="avatar" id="userAvatarCanvas" width="36" height="36" style="display:none;"></canvas>
+            <span>
+              <p class="name" id="userName"></p>
+              <p class="role" id="userRole"></p>
+            </span>
+            <span class="material-symbols-outlined" style="font-size:16px; color:#6B7280;">expand_more</span>
+          </button>
+          <div class="dropdown-panel" id="userPanel" style="width:220px;">
+            <a class="item" style="text-decoration:none; color:inherit;" href="avatar.html"><span class="material-symbols-outlined" style="font-size:18px;">person</span> Mi perfil</a>
+            <div class="item"><span class="material-symbols-outlined" style="font-size:18px;">tune</span> Preferencias</div>
+            <div class="item" id="userNotifItem"><span class="material-symbols-outlined" style="font-size:18px;">notifications_active</span> Notificaciones</div>
+            <div class="item"><span class="material-symbols-outlined" style="font-size:18px;">help</span> Ayuda y soporte</div>
+            <a class="item" id="logoutLink" style="color:var(--tema-error); text-decoration:none;" href="login.html"><span class="material-symbols-outlined" style="font-size:18px;">logout</span> Cerrar sesión</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
 <div id="app"></div>
 
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
+<script src="js/avatar-draw.js"></script>
+<script src="js/header.js"></script>
 <script src="js/avatar.js"></script>
+<script src="js/portal-tools.js"></script>
 </body>
 </html>
