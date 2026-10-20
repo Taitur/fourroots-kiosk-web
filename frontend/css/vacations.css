@@ -59,6 +59,11 @@ svg.ks-icon {
   margin-bottom: 0;
 }
 
+.ks-vac-stats[hidden],
+.ks-vac-grid[hidden] {
+  display: none;
+}
+
 .ks-vac-stats {
   display: flex;
   gap: 56px;

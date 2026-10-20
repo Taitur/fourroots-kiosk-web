@@ -120,15 +120,9 @@ async function getSurveys(userId, limit = 5) {
   const pool = await getConnection();
   const result = await pool
     .request()
-    .input("usuario", sql.Int, userId)
     .input("limit", sql.Int, limit)
     .query(`
-      SELECT TOP (@limit) e.iIdEncuesta AS id, e.vcPregunta AS pregunta,
-             (SELECT COUNT(*) FROM kio_tbencuestasusuario v WHERE v.iidencuesta = e.iIdEncuesta) AS votos,
-             CASE WHEN EXISTS (
-               SELECT 1 FROM kio_tbencuestasusuario v2
-               WHERE v2.iidencuesta = e.iIdEncuesta AND v2.iidusuariovota = @usuario
-             ) THEN 1 ELSE 0 END AS yaVoto
+      SELECT TOP (@limit) e.iIdEncuesta AS id, e.vcPregunta AS pregunta
       FROM kio_tbEncuestas e
       WHERE e.smmostrar = 1 AND (e.dtVigencia IS NULL OR e.dtVigencia >= GETDATE())
       ORDER BY e.dtFechaRegistro DESC`);
@@ -266,9 +260,164 @@ async function getBirthdaysToday() {
   }));
 }
 
+// Registra el voto del usuario en una encuesta vigente, incluyendo la opción
+// elegida (kio_tbEncuestasOpciones). Si la encuesta no tiene opciones, se
+// mantiene el comportamiento anterior: solo registra la participación.
+async function castVote(userId, encuestaId, optionId) {
+  const pool = await getConnection();
+
+  const vigente = await pool
+    .request()
+    .input("encuesta", sql.Int, encuestaId)
+    .query(`
+      SELECT iIdEncuesta FROM kio_tbEncuestas
+      WHERE iIdEncuesta = @encuesta AND smmostrar = 1 AND (dtVigencia IS NULL OR dtVigencia >= GETDATE())`);
+  if (!vigente.recordset.length) {
+    return { ok: false, error: "La encuesta no existe o ya no está vigente." };
+  }
+
+  const opciones = await pool
+    .request()
+    .input("encuesta", sql.Int, encuestaId)
+    .query(`SELECT iIdOpcion FROM kio_tbEncuestasOpciones WHERE iIdEncuesta = @encuesta`);
+
+  let opcionIdValida = null;
+  if (opciones.recordset.length) {
+    if (!Number.isInteger(optionId)) {
+      return { ok: false, error: "Selecciona una opción." };
+    }
+    const match = opciones.recordset.find((o) => o.iIdOpcion === optionId);
+    if (!match) {
+      return { ok: false, error: "Esa opción no pertenece a esta encuesta." };
+    }
+    opcionIdValida = optionId;
+  }
+
+  const yaVoto = await pool
+    .request()
+    .input("encuesta", sql.Int, encuestaId)
+    .input("usuario", sql.Int, userId)
+    .query(`
+      SELECT 1 FROM kio_tbencuestasusuario
+      WHERE iidencuesta = @encuesta AND iidusuariovota = @usuario`);
+  if (yaVoto.recordset.length) {
+    return { ok: false, error: "Ya votaste en esta encuesta." };
+  }
+
+  await pool
+    .request()
+    .input("encuesta", sql.Int, encuestaId)
+    .input("usuario", sql.Int, userId)
+    .input("opcion", sql.Int, opcionIdValida)
+    .query(`
+      INSERT INTO kio_tbencuestasusuario (iidencuesta, iidusuariovota, dtfecharegistro, dtfechamodificacion, iIdOpcion)
+      VALUES (@encuesta, @usuario, GETDATE(), GETDATE(), @opcion)`);
+
+  return { ok: true };
+}
+
+// Publicaciones de usuarios en el Home de Engage (kio_tbEngagePosts), con
+// sus comentarios (kio_tbEngageComentarios), de la más reciente a la más
+// antigua.
+async function getPosts(limit = 20) {
+  const pool = await getConnection();
+  const result = await pool
+    .request()
+    .input("limit", sql.Int, limit)
+    .query(`
+      SELECT TOP (@limit) p.iIdPost AS id, p.vcTexto AS texto, p.dtFechaRegistro AS fecha,
+             r.nombre, r.paterno, r.materno
+      FROM kio_tbEngagePosts p
+      LEFT JOIN kio_tbUsuarios u ON u.iIdUsuario = p.iIdAutor
+      LEFT JOIN recursos r ON r.id = u.iId
+      ORDER BY p.dtFechaRegistro DESC`);
+
+  const posts = result.recordset.map((row) => ({
+    id: row.id,
+    text: row.texto,
+    author: fullName(row.nombre, row.paterno, row.materno) || "Eslabón",
+    time: relativeTime(row.fecha),
+    comments: [],
+  }));
+  if (!posts.length) return posts;
+
+  const postsById = {};
+  posts.forEach((p) => { postsById[p.id] = p; });
+
+  const comentarios = await pool.request().query(`
+    SELECT c.iIdComentario AS id, c.iIdPost AS postId, c.vcTexto AS texto, c.dtFechaRegistro AS fecha,
+           r.nombre, r.paterno, r.materno
+    FROM kio_tbEngageComentarios c
+    LEFT JOIN kio_tbUsuarios u ON u.iIdUsuario = c.iIdAutor
+    LEFT JOIN recursos r ON r.id = u.iId
+    ORDER BY c.dtFechaRegistro ASC`);
+
+  for (const row of comentarios.recordset) {
+    const post = postsById[row.postId];
+    if (!post) continue;
+    post.comments.push({
+      id: row.id,
+      text: row.texto,
+      author: fullName(row.nombre, row.paterno, row.materno) || "Eslabón",
+      time: relativeTime(row.fecha),
+    });
+  }
+
+  return posts;
+}
+
+// Crea una publicación nueva en el Home de Engage.
+async function createPost(userId, texto) {
+  const limpio = (texto || "").trim();
+  if (!limpio) return { ok: false, error: "Escribe algo para publicar." };
+
+  const pool = await getConnection();
+  await pool
+    .request()
+    .input("autor", sql.Int, userId)
+    .input("texto", sql.NVarChar(sql.MAX), limpio)
+    .query(`
+      INSERT INTO kio_tbEngagePosts (iIdAutor, vcTexto, dtFechaRegistro)
+      VALUES (@autor, @texto, GETDATE())`);
+
+  return { ok: true };
+}
+
+// Agrega un comentario (respuesta) a una publicación existente.
+async function addComment(userId, postId, texto) {
+  const limpio = (texto || "").trim();
+  if (!limpio) return { ok: false, error: "Escribe una respuesta." };
+  if (limpio.length > 500) return { ok: false, error: "La respuesta es demasiado larga (máximo 500 caracteres)." };
+
+  const pool = await getConnection();
+
+  const existe = await pool
+    .request()
+    .input("post", sql.Int, postId)
+    .query(`SELECT iIdPost FROM kio_tbEngagePosts WHERE iIdPost = @post`);
+  if (!existe.recordset.length) {
+    return { ok: false, error: "La publicación ya no existe." };
+  }
+
+  await pool
+    .request()
+    .input("post", sql.Int, postId)
+    .input("autor", sql.Int, userId)
+    .input("texto", sql.NVarChar(500), limpio)
+    .query(`
+      INSERT INTO kio_tbEngageComentarios (iIdPost, iIdAutor, vcTexto, dtFechaRegistro)
+      VALUES (@post, @autor, @texto, GETDATE())`);
+
+  return { ok: true };
+}
+
 module.exports = {
-  getFeed, createNews, updateNews, deleteNews,
-  getSurveys, voteSurvey,
-  getKudos, giveKudos, deleteKudos,
+  getFeed,
+  getSurveys,
+  getKudos,
   getBirthdaysToday,
+  castVote,
+  getPosts,
+  createPost,
+  addComment,
 };

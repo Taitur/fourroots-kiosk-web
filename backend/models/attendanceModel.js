@@ -1,11 +1,15 @@
 const { sql, getConnection } = require("../db");
 
 // Ficha de asistencia de un colaborador: antigüedad y turno vienen de `empleados`,
-// los ascensos de `kio_tbSolIncrementoSueldo` y faltas, retardos y llegadas temprano de la
-// tabla `Asistencias` (un registro por día y empleado, con Tipo Falta, Retardo, Temprano o
-// Puntual). Las horas extra siguen en cero: `Asistencias` no guarda esa información.
+// los ascensos de `kio_tbSolIncrementoSueldo` (único movimiento de puesto/sueldo real
+// en la BD), y faltas/tardanzas/tempranas/horas extra de `kio_tbMarcajes` (marcajes
+// diarios; ver scripts/seed_attendance_data.sql).
 
 const MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+// Minutos de tolerancia respecto al horario programado antes de contar
+// una llegada como tarde o temprano.
+const TOLERANCE_MINUTES = 10;
 
 const METRIC_DEFS = [
   { key: "faltas", label: "Faltas", chartTitle: "Faltas por mes", color: "#C1573F", unit: "", tone: "warn",
@@ -79,43 +83,62 @@ async function getPromotions(employeeId) {
   });
 }
 
-// Columna Tipo de Asistencias -> clave de métrica de la ficha.
-const TIPO_A_METRICA = { falta: "faltas", retardo: "tardanzas", temprano: "tempranas" };
-
-// Conteo mensual de faltas, retardos y llegadas temprano del año indicado (enero hasta `monthCount`).
-// Devuelve { faltas: [..], tardanzas: [..], tempranas: [..] } con un valor por mes.
-async function getAttendanceByMonth(user, year, monthCount) {
-  const counts = { faltas: [], tardanzas: [], tempranas: [] };
-  Object.keys(counts).forEach((k) => { counts[k] = new Array(monthCount).fill(0); });
-  if (!user.employeeId) return counts;
-
+// Marcajes diarios reales desde kio_tbMarcajes: cada fila es un día con su
+// horario programado y lo que de verdad marcó el empleado (NULL = falta).
+async function getAttendanceRecords(employeeId, year) {
+  if (!employeeId) return [];
   const pool = await getConnection();
   const result = await pool
     .request()
-    .input("compania", sql.Int, user.companyId || null)
-    .input("empleado", sql.Int, user.employeeId)
-    .input("anio", sql.Int, year)
+    .input("id", sql.Int, employeeId)
+    .input("year", sql.Int, year)
     .query(`
-      SELECT MONTH(Fecha) AS mes, Tipo AS tipo, COUNT(*) AS total
-      FROM Asistencias
-      WHERE IdEmpleado = @empleado
-        AND (@compania IS NULL OR Compania = @compania)
-        AND Fecha >= DATEFROMPARTS(@anio, 1, 1) AND Fecha < DATEFROMPARTS(@anio + 1, 1, 1)
-      GROUP BY MONTH(Fecha), Tipo`);
+      SELECT dtFecha, dtHoraEntradaProgramada, dtHoraSalidaProgramada,
+             dtHoraEntrada, dtHoraSalida, bFalta
+      FROM kio_tbMarcajes
+      WHERE iIdEmpleado = @id AND YEAR(dtFecha) = @year
+      ORDER BY dtFecha`);
+  return result.recordset;
+}
 
-  result.recordset.forEach((row) => {
-    const key = TIPO_A_METRICA[String(row.tipo || "").trim().toLowerCase()];
-    const index = Number(row.mes) - 1;
-    if (key && index >= 0 && index < monthCount) counts[key][index] += Number(row.total) || 0;
+function buildAttendanceMetrics(records, monthCount) {
+  const faltas = new Array(monthCount).fill(0);
+  const tardanzas = new Array(monthCount).fill(0);
+  const tempranas = new Array(monthCount).fill(0);
+  const horasExtra = new Array(monthCount).fill(0);
+
+  records.forEach((r) => {
+    const month = new Date(r.dtFecha).getMonth();
+    if (month >= monthCount) return;
+
+    if (r.bFalta || !r.dtHoraEntrada) {
+      faltas[month]++;
+      return;
+    }
+
+    if (r.dtHoraEntradaProgramada) {
+      const diffMin = (new Date(r.dtHoraEntrada) - new Date(r.dtHoraEntradaProgramada)) / 60000;
+      if (diffMin > TOLERANCE_MINUTES) tardanzas[month]++;
+      else if (diffMin < -TOLERANCE_MINUTES) tempranas[month]++;
+    }
+
+    if (r.dtHoraSalida && r.dtHoraSalidaProgramada) {
+      const extraMin = (new Date(r.dtHoraSalida) - new Date(r.dtHoraSalidaProgramada)) / 60000;
+      if (extraMin > 0) horasExtra[month] += Math.round((extraMin / 60) * 100) / 100;
+    }
   });
-  return counts;
+
+  return { faltas, tardanzas, tempranas, horasExtra };
 }
 
 async function getEmployeeSheet(user) {
   const now = new Date();
   const months = MONTH_LABELS.slice(0, now.getMonth() + 1);
 
-  const promotions = await getPromotions(user.employeeId);
+  const [promotions, records] = await Promise.all([
+    getPromotions(user.employeeId),
+    getAttendanceRecords(user.employeeId, now.getFullYear()),
+  ]);
 
   const ascensosPorMes = new Array(months.length).fill(0);
   promotions.forEach((p) => {

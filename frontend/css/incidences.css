@@ -1,6 +1,10 @@
 /* Estilos de la página de Incidencias (se carga junto con vacations.css, de donde vienen
    las variables, .card-ks, .ks-vac-* y los botones). Prefijo ks-inc-. */
 
+.ks-inc-grid[hidden] {
+  display: none;
+}
+
 .ks-inc-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
