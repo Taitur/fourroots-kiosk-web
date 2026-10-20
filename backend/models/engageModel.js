@@ -160,33 +160,6 @@ async function getSurveys(userId, limit = 5) {
   return surveys;
 }
 
-// Registra el voto de un usuario. Solo si la encuesta está vigente, la opción es de esa
-// encuesta y el usuario no ha votado antes. Devuelve { ok, error? }.
-async function voteSurvey(userId, surveyId, optionId) {
-  const pool = await getConnection();
-  const result = await pool
-    .request()
-    .input("encuesta", sql.Int, surveyId)
-    .input("opcion", sql.Int, optionId)
-    .input("usuario", sql.Int, userId)
-    .query(`
-      INSERT INTO kio_tbencuestasusuario (iidencuesta, iidusuariovota, iIdOpcion, dtfecharegistro, dtfechamodificacion)
-      SELECT @encuesta, @usuario, @opcion, GETDATE(), GETDATE()
-      WHERE EXISTS (
-              SELECT 1 FROM kio_tbEncuestas e
-              JOIN kio_tbEncuestasOpciones o ON o.iIdEncuesta = e.iIdEncuesta
-              WHERE e.iIdEncuesta = @encuesta AND o.iIdOpcion = @opcion
-                AND e.smmostrar = 1 AND (e.dtVigencia IS NULL OR e.dtVigencia >= GETDATE()))
-        AND NOT EXISTS (
-              SELECT 1 FROM kio_tbencuestasusuario WITH (UPDLOCK, HOLDLOCK)
-              WHERE iidencuesta = @encuesta AND iidusuariovota = @usuario)`);
-
-  if (result.rowsAffected[0] === 0) {
-    return { ok: false, error: "No se pudo registrar tu voto: ya votaste o la encuesta no está disponible." };
-  }
-  return { ok: true };
-}
-
 // Reconocimientos (aplausos) recientes entre compañeros.
 async function getKudos(limit = 10) {
   const pool = await getConnection();
@@ -413,8 +386,13 @@ async function addComment(userId, postId, texto) {
 
 module.exports = {
   getFeed,
+  createNews,
+  updateNews,
+  deleteNews,
   getSurveys,
   getKudos,
+  giveKudos,
+  deleteKudos,
   getBirthdaysToday,
   castVote,
   getPosts,
