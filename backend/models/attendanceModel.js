@@ -146,10 +146,14 @@ async function getEmployeeSheet(user) {
     ascensosPorMes[p.rawDate.getMonth()]++;
   });
 
-  const attendance = buildAttendanceMetrics(records, months.length);
-  const valuesByKey = { ...attendance, ascensos: ascensosPorMes };
+  const attendance = await getAttendanceByMonth(user, now.getFullYear(), months.length);
 
-  const metrics = METRIC_DEFS.map((def) => withTotals({ ...def, values: valuesByKey[def.key] }));
+  const metrics = METRIC_DEFS.map((def) =>
+    withTotals({
+      ...def,
+      values: def.key === "ascensos" ? ascensosPorMes : attendance[def.key] || new Array(months.length).fill(0),
+    })
+  );
 
   const info = await getEmployeeInfo(user.employeeId);
   const seniority = info && (info.antiguedad_anios || info.antiguedad_meses)

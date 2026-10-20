@@ -1,21 +1,33 @@
 const engageModel = require("../models/engageModel");
 
-// GET /api/engage — feed, encuestas, aplausos, cumpleaños y posts del día.
+const MAX_TITULO = 100;
+const MAX_TEXTO = 2000;
+const MAX_NOMBRE = 150;
+const MAX_MENSAJE = 300;
+
+const isAdmin = (user) => user.role === "Administrador";
+
+// Marca qué publicaciones y aplausos puede modificar el usuario: el autor o un Administrador.
+const feedFor = (feed, user) => feed.map((p) => ({ ...p, canEdit: p.authorId === user.id || isAdmin(user) }));
+const kudosFor = (kudos, user) => kudos.map((k) => ({ ...k, canDelete: k.giverId === user.id || isAdmin(user) }));
+
+// GET /api/engage — feed, encuestas, aplausos y cumpleaños del día.
 async function index(req, res) {
-  const userId = req.session.user.id;
-  const [feed, surveys, kudos, birthdays, posts] = await Promise.all([
+  const user = req.session.user;
+  const [feed, surveys, kudos, birthdays] = await Promise.all([
     engageModel.getFeed(),
-    engageModel.getSurveys(userId),
+    engageModel.getSurveys(user.id),
     engageModel.getKudos(),
     engageModel.getBirthdaysToday(),
     engageModel.getPosts(),
   ]);
 
+  const feedWithPerms = feedFor(feed, user);
   res.json({
-    feed,
-    announcement: feed[0] || null,
+    feed: feedWithPerms,
+    announcement: feedWithPerms[0] || null,
     surveys,
-    kudos,
+    kudos: kudosFor(kudos, user),
     birthdays,
     posts,
   });
