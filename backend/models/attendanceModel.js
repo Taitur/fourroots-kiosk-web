@@ -1,9 +1,9 @@
 const { sql, getConnection } = require("../db");
 
 // Ficha de asistencia de un colaborador: antigüedad y turno vienen de `empleados`,
-// los ascensos de `kio_tbSolIncrementoSueldo` (único movimiento de puesto/sueldo real
-// en la BD). No existe todavía una tabla de marcajes/faltas/tardanzas diarios, así que
-// esas métricas se calculan en cero hasta que exista esa fuente (p. ej. un Kardex real).
+// los ascensos de `kio_tbSolIncrementoSueldo` y faltas, retardos y llegadas temprano de la
+// tabla `Asistencias` (un registro por día y empleado, con Tipo Falta, Retardo, Temprano o
+// Puntual). Las horas extra siguen en cero: `Asistencias` no guarda esa información.
 
 const MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
@@ -79,6 +79,38 @@ async function getPromotions(employeeId) {
   });
 }
 
+// Columna Tipo de Asistencias -> clave de métrica de la ficha.
+const TIPO_A_METRICA = { falta: "faltas", retardo: "tardanzas", temprano: "tempranas" };
+
+// Conteo mensual de faltas, retardos y llegadas temprano del año indicado (enero hasta `monthCount`).
+// Devuelve { faltas: [..], tardanzas: [..], tempranas: [..] } con un valor por mes.
+async function getAttendanceByMonth(user, year, monthCount) {
+  const counts = { faltas: [], tardanzas: [], tempranas: [] };
+  Object.keys(counts).forEach((k) => { counts[k] = new Array(monthCount).fill(0); });
+  if (!user.employeeId) return counts;
+
+  const pool = await getConnection();
+  const result = await pool
+    .request()
+    .input("compania", sql.Int, user.companyId || null)
+    .input("empleado", sql.Int, user.employeeId)
+    .input("anio", sql.Int, year)
+    .query(`
+      SELECT MONTH(Fecha) AS mes, Tipo AS tipo, COUNT(*) AS total
+      FROM Asistencias
+      WHERE IdEmpleado = @empleado
+        AND (@compania IS NULL OR Compania = @compania)
+        AND Fecha >= DATEFROMPARTS(@anio, 1, 1) AND Fecha < DATEFROMPARTS(@anio + 1, 1, 1)
+      GROUP BY MONTH(Fecha), Tipo`);
+
+  result.recordset.forEach((row) => {
+    const key = TIPO_A_METRICA[String(row.tipo || "").trim().toLowerCase()];
+    const index = Number(row.mes) - 1;
+    if (key && index >= 0 && index < monthCount) counts[key][index] += Number(row.total) || 0;
+  });
+  return counts;
+}
+
 async function getEmployeeSheet(user) {
   const now = new Date();
   const months = MONTH_LABELS.slice(0, now.getMonth() + 1);
@@ -91,8 +123,13 @@ async function getEmployeeSheet(user) {
     ascensosPorMes[p.rawDate.getMonth()]++;
   });
 
+  const attendance = await getAttendanceByMonth(user, now.getFullYear(), months.length);
+
   const metrics = METRIC_DEFS.map((def) =>
-    withTotals({ ...def, values: def.key === "ascensos" ? ascensosPorMes : new Array(months.length).fill(0) })
+    withTotals({
+      ...def,
+      values: def.key === "ascensos" ? ascensosPorMes : attendance[def.key] || new Array(months.length).fill(0),
+    })
   );
 
   const info = await getEmployeeInfo(user.employeeId);

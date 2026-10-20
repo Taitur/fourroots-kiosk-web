@@ -1,3 +1,12 @@
+// Node < 22 no trae Promise.withResolvers y mssql lo usa. Solo se define si falta.
+if (!Promise.withResolvers) {
+  Promise.withResolvers = function () {
+    let resolve, reject;
+    const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+    return { promise, resolve, reject };
+  };
+}
+
 const path = require("path");
 
 // Debe cargarse antes que cualquier otro módulo: db.js lee process.env al importarse.
