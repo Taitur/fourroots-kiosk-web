@@ -497,3 +497,96 @@
 @media (max-width: 480px) {
   .dash-modules { grid-template-columns: 1fr; }
 }
+
+/* -------- Administrador: selector de colaborador y edición de registros -------- */
+.adm-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 8px;
+}
+
+.adm-bar label,
+.adm-toolbar label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dash-graphite);
+}
+
+.adm-bar select,
+.adm-toolbar input,
+.adm-table select,
+.adm-table input,
+.adm-promo-form input {
+  font: inherit;
+  font-size: 14px;
+  color: var(--dash-ink);
+  background: var(--dash-paper);
+  border: 1px solid var(--dash-hairline);
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+
+.adm-bar select { min-width: 260px; }
+
+.adm-toolbar { margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.adm-toolbar input { margin-left: 8px; }
+
+.adm-btn {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dash-ink);
+  background: var(--dash-paper);
+  border: 1px solid var(--dash-hairline);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.adm-btn:hover:not(:disabled) { border-color: var(--dash-graphite); }
+.adm-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.adm-btn-primary {
+  color: #fff;
+  background: var(--dash-ink);
+  border-color: var(--dash-ink);
+}
+
+.adm-table { width: 100%; border-collapse: collapse; }
+.adm-table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dash-graphite);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--dash-hairline);
+}
+.adm-table td { padding: 6px 10px; border-bottom: 1px solid var(--dash-hairline); }
+.adm-day { font-family: "IBM Plex Mono", ui-monospace, monospace; width: 90px; }
+.adm-day span { margin-left: 8px; font-size: 12px; color: var(--dash-graphite); }
+.adm-actions { text-align: right; white-space: nowrap; }
+.adm-actions .adm-btn + .adm-btn { margin-left: 6px; }
+.adm-empty { color: var(--dash-graphite); margin: 0; }
+
+.adm-promo-form { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.adm-promo-form[hidden] { display: none; }
+.adm-promo-form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--dash-graphite); }
+.adm-promo-form input[name="reason"] { min-width: 260px; }
+.dash-tl-item .adm-btn { margin-top: 8px; }
+
+.adm-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  background: #11151A;
+  color: #fff;
+  font-size: 14px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  z-index: 1000;
+}
+.adm-toast.is-error { background: #C1573F; }
+
+.adm-hours { width: 84px; }
