@@ -9,6 +9,7 @@
   const { esc } = Portal;
   const { user: me } = await Header.init();
   const isAdmin = me.role === "Administrador";
+  const firstName = (me.name || "").trim().split(" ")[0];
 
   const res = await Portal.get("/engage");
   const app = document.getElementById("app");
@@ -20,6 +21,7 @@
   const model = res.data;
   const selectedOptions = {};
   let currentView = "home";
+  let birthdayTab = "today";
   let editingAnnouncementId = null;
 
   // Color de avatar determinista a partir del nombre, sin depender de una lista fija.
@@ -52,14 +54,22 @@
         </article>`;
     }
 
+    // Ya votó: resultados en porcentaje con barra.
     if (survey.voted) {
-      const chosen = options.find((opt) => opt.id === survey.myOption);
+      const results = options
+        .map((opt) => {
+          const pct = total ? Math.round((opt.votes / total) * 100) : 0;
+          return `<div class="engage-survey-result${opt.id === survey.myOption ? " is-chosen" : ""}">
+              <div><span>${esc(opt.text)}</span><span>${pct}%</span></div>
+              <div class="engage-survey-bar"><span style="width:${pct}%"></span></div>
+            </div>`;
+        })
+        .join("");
       return `<article class="engage-rail-card">
           <h3>Encuesta</h3>
           <p>${esc(survey.question)}</p>
-          <button type="button" class="engage-survey-submit" data-survey-id="${survey.id}" disabled>
-            <span>${chosen ? "Votaste: " + esc(chosen.text) : "Ya votaste"}</span><span>${total} voto${total === 1 ? "" : "s"}</span>
-          </button>
+          ${results}
+          <small class="engage-subtitle">Ya votaste · ${total} voto${total === 1 ? "" : "s"} en total</small>
         </article>`;
     }
 
@@ -114,12 +124,79 @@
       </div>`;
   }
 
+  const todayBirthdays = () => model.birthdays.filter((b) => b.isToday);
+
+  function birthdayDate(b) {
+    if (b.isToday) return "Hoy es su cumpleaños";
+    return new Date(2000, b.month - 1, b.day).toLocaleDateString("es-MX", { day: "numeric", month: "long" });
+  }
+
+  // Tarjeta de cumpleaños: mensajes recibidos este año y, si es hoy, campo para felicitar.
   function birthdayCard(b) {
-    return `<article class="engage-birthday-card">
+    const messages = b.messages
+      .map((m) => `<div class="engage-birthday-message"><strong>${esc(m.author)}</strong><p>${esc(m.text)}</p></div>`)
+      .join("");
+    const form = b.isToday
+      ? `<div class="engage-reply-row">
+          <input type="text" class="engage-reply-input" data-birthday-id="${b.id}" placeholder="Escribe un mensaje..." maxlength="${MAX_MENSAJE}" />
+          <button type="button" class="engage-reply-button engage-birthday-send" data-birthday-id="${b.id}">Felicitar</button>
+        </div>`
+      : "";
+    return `<article class="engage-birthday-card${b.isToday ? " is-today" : ""}">
         ${avatarTag(b.name, 58)}
         <strong>${esc(b.name)}</strong>
-        <small>Hoy es su cumpleaños</small>
+        <small>${esc(birthdayDate(b))}</small>
+        ${messages ? `<div class="engage-birthday-messages">${messages}</div>` : ""}
+        ${form}
       </article>`;
+  }
+
+  function birthdaysView() {
+    const month = new Date().getMonth() + 1;
+    const lists = {
+      today: todayBirthdays(),
+      month: model.birthdays.filter((b) => b.month === month),
+      all: model.birthdays,
+    };
+    const tabs = [["today", "Hoy"], ["month", "Este mes"], ["all", "Todos"]]
+      .map(([key, label]) => `<button type="button" class="${birthdayTab === key ? "is-active" : ""}" data-birthday-tab="${key}">${label}</button>`)
+      .join("");
+    const list = lists[birthdayTab];
+    return `<div class="engage-tabs">${tabs}</div>
+      <div class="engage-birthday-grid">${list.length ? list.map(birthdayCard).join("") : '<p class="engage-subtitle">No hay cumpleaños en este periodo.</p>'}</div>`;
+  }
+
+  // Consejo de bienestar: el más apoyado (con al menos un voto) lleva la etiqueta de recompensa.
+  function tipCard(tip, index) {
+    const top = index === 0 && tip.votes > 0 ? '<em class="tag-wellness">🏆 Más apoyado</em>' : "";
+    return `<article class="engage-post">
+        <div class="engage-post-header">
+          ${avatarTag(tip.author, 36)}
+          <div><strong>${esc(tip.author)}${top}</strong><small>${esc(tip.time)}</small></div>
+        </div>
+        <p>${esc(tip.text)}</p>
+        <div class="engage-post-actions">
+          <button type="button" class="engage-tip-vote${tip.voted ? " is-liked" : ""}" data-tip-id="${tip.id}">
+            <span class="material-symbols-outlined" style="font-size:18px;">favorite</span>
+            <span>${tip.voted ? "Apoyado" : "Apoyar"} · ${tip.votes}</span>
+          </button>
+        </div>
+      </article>`;
+  }
+
+  function tipsView() {
+    return `<article class="engage-announcement">
+        <small>Votación de bienestar</small>
+        <h2>El consejo con más apoyo recibe una recompensa</h2>
+        <p>Comparte lo que te funciona y apoya los consejos que te gusten.</p>
+      </article>
+      <article class="engage-composer">
+        <textarea class="engage-composer-textarea" id="tipComposerInput" placeholder="Comparte un consejo de bienestar..." maxlength="500"></textarea>
+        <div class="engage-composer-types">
+          <button type="button" class="engage-composer-submit engage-primary-button" id="tipComposerSubmit" style="width:auto;">Proponer consejo</button>
+        </div>
+      </article>
+      ${model.tips.length ? model.tips.map(tipCard).join("") : '<p class="engage-subtitle">Todavía no hay consejos. ¡Propón el primero!</p>'}`;
   }
 
   function announcementCard(post) {
@@ -190,7 +267,7 @@
   function composerCard() {
     return `<article class="engage-composer">
         <div class="engage-composer-row">
-          <textarea class="engage-composer-textarea" id="postComposerInput" placeholder="¿Qué quieres compartir con el equipo?" maxlength="2000"></textarea>
+          <textarea class="engage-composer-textarea" id="postComposerInput" placeholder="¿Qué quieres compartir hoy${firstName ? ", " + esc(firstName) : ""}?" maxlength="2000"></textarea>
         </div>
         <div class="engage-composer-types">
           <button type="button" class="engage-composer-submit engage-primary-button" id="postComposerSubmit" style="width:auto;">Publicar</button>
@@ -200,7 +277,7 @@
 
   const VIEWS = {
     home: {
-      title: "Home",
+      title: firstName ? `¡Hola, ${firstName}!` : "Home",
       subtitle: "Comparte con el equipo y revisa los anuncios de la compañía.",
       render: () =>
         composerCard() +
@@ -210,8 +287,13 @@
     },
     birthdays: {
       title: "Birthdays",
-      subtitle: "Compañeros que cumplen años hoy.",
-      render: () => `<div class="engage-birthday-grid">${model.birthdays.length ? model.birthdays.map(birthdayCard).join("") : '<p class="engage-subtitle">Nadie cumple años hoy.</p>'}</div>`,
+      subtitle: "Deja un mensaje real, no solo un botón.",
+      render: birthdaysView,
+    },
+    tips: {
+      title: "Bienestar",
+      subtitle: "Consejos de bienestar propuestos por el equipo.",
+      render: tipsView,
     },
     surveys: {
       title: "Surveys",
@@ -236,6 +318,7 @@
             <nav aria-label="Engage navigation">
                 <button class="engage-nav-item${currentView === "home" ? " is-active" : ""}" type="button" data-view="home"><span class="material-symbols-outlined">home</span><span>Home</span></button>
                 <button class="engage-nav-item${currentView === "birthdays" ? " is-active" : ""}" type="button" data-view="birthdays"><span class="material-symbols-outlined">cake</span><span>Birthdays</span></button>
+                <button class="engage-nav-item${currentView === "tips" ? " is-active" : ""}" type="button" data-view="tips"><span class="material-symbols-outlined">spa</span><span>Bienestar</span></button>
                 <button class="engage-nav-item${currentView === "surveys" ? " is-active" : ""}" type="button" data-view="surveys"><span class="material-symbols-outlined">bar_chart</span><span>Surveys</span></button>
                 <button class="engage-nav-item${currentView === "announcements" ? " is-active" : ""}" type="button" data-view="announcements"><span class="material-symbols-outlined">campaign</span><span>Announcements</span></button>
             </nav>
@@ -264,7 +347,7 @@
 
             <article class="engage-rail-card">
                 <h3>Cumpleaños hoy</h3>
-                ${model.birthdays.length ? model.birthdays.map(birthdayItem).join("") : "<p>Nadie cumple años hoy.</p>"}
+                ${todayBirthdays().length ? todayBirthdays().map(birthdayItem).join("") : "<p>Nadie cumple años hoy.</p>"}
             </article>
         </aside>
     </div>
@@ -402,6 +485,43 @@
     renderApp();
   }
 
+  async function handleBirthdayMessage(recursoId, input) {
+    const texto = input.value.trim();
+    if (!texto) return;
+
+    const r = await Portal.post(`/engage/birthdays/${recursoId}/messages`, { texto });
+    if (!r.ok) {
+      alert(errorText(r, "No se pudo enviar el mensaje."));
+      return;
+    }
+    model.birthdays = r.data.birthdays;
+    renderApp();
+  }
+
+  async function handleCreateTip() {
+    const input = document.getElementById("tipComposerInput");
+    const texto = input.value.trim();
+    if (!texto) return;
+
+    const r = await Portal.post("/engage/tips", { texto });
+    if (!r.ok) {
+      alert(errorText(r, "No se pudo publicar el consejo."));
+      return;
+    }
+    model.tips = r.data.tips;
+    renderApp();
+  }
+
+  async function handleVoteTip(tipId) {
+    const r = await Portal.post(`/engage/tips/${tipId}/vote`, {});
+    if (!r.ok) {
+      alert(errorText(r, "No se pudo registrar tu apoyo."));
+      return;
+    }
+    model.tips = r.data.tips;
+    renderApp();
+  }
+
   // Delegación de eventos sobre #app: sobrevive a los re-renders completos de renderApp().
   app.addEventListener("click", async (event) => {
     const navBtn = event.target.closest("button[data-view]");
@@ -409,6 +529,23 @@
       currentView = navBtn.dataset.view;
       return renderApp();
     }
+
+    const tabBtn = event.target.closest("button[data-birthday-tab]");
+    if (tabBtn) {
+      birthdayTab = tabBtn.dataset.birthdayTab;
+      return renderApp();
+    }
+
+    const birthdayBtn = event.target.closest(".engage-birthday-send");
+    if (birthdayBtn) {
+      const id = birthdayBtn.dataset.birthdayId;
+      return handleBirthdayMessage(id, app.querySelector(`.engage-reply-input[data-birthday-id="${id}"]`));
+    }
+
+    if (event.target.closest("#tipComposerSubmit")) return handleCreateTip();
+
+    const tipBtn = event.target.closest(".engage-tip-vote");
+    if (tipBtn) return handleVoteTip(Number(tipBtn.dataset.tipId));
 
     const optionBtn = event.target.closest(".engage-survey-option");
     if (optionBtn) return handleSelect(optionBtn);

@@ -53,6 +53,9 @@ router.patch("/engage/announcements/:id", requireAuth, csrf.verifyToken, engage.
 router.delete("/engage/announcements/:id", requireAuth, csrf.verifyToken, engage.deleteAnnouncement);
 router.post("/engage/kudos", requireAuth, csrf.verifyToken, engage.createKudos);
 router.delete("/engage/kudos/:id", requireAuth, csrf.verifyToken, engage.removeKudos);
+router.post("/engage/birthdays/:id/messages", requireAuth, csrf.verifyToken, engage.addBirthdayMessage);
+router.post("/engage/tips", requireAuth, csrf.verifyToken, engage.createTip);
+router.post("/engage/tips/:id/vote", requireAuth, csrf.verifyToken, engage.voteTip);
 
 // ---- Vacaciones ----
 router.get("/vacations", requireAuth, vacations.index);
