@@ -1,5 +1,5 @@
 (async function () {
-  await Portal.requireSession();
+  const { user } = await Header.init();
   const loaded = await Portal.get("/vacations");
   if (!loaded.ok) {
     const box = document.getElementById("vacMessage");
@@ -170,4 +170,75 @@
   updateSummary(data.summary);
   render();
   renderSelection();
+
+  // Un Administrador no solicita vacaciones para sí mismo: solo administra las de su equipo.
+  // Por lo tanto no ve el calendario de solicitud, solo el panel de aprobación.
+  if (user.role === "Administrador") {
+    document.getElementById("vacStatsBox").hidden = true;
+    document.getElementById("vacGrid").hidden = true;
+    document.getElementById("vacPageTitle").innerHTML = "Solicitudes<br>de vacaciones";
+    document.getElementById("vacPageLead").textContent = "Aprueba o rechaza las solicitudes de vacaciones de tu equipo.";
+  }
+
+  // ---- panel de administración (solo Administrador) ----
+  const adminCard = document.getElementById("vacAdminCard");
+  const adminListEl = document.getElementById("vacAdminList");
+
+  function renderAdmin(requests) {
+    if (!requests.length) {
+      adminListEl.innerHTML = '<p class="ks-inc-empty">No hay solicitudes pendientes.</p>';
+      return;
+    }
+    adminListEl.replaceChildren(
+      ...requests.map((r) => {
+        const item = document.createElement("div");
+        item.className = "ks-inc-item";
+        item.innerHTML = `
+          <div class="ks-inc-item-top"><span class="ks-inc-item-title"></span><span class="ks-inc-badge is-proceso">En proceso</span></div>
+          <div class="ks-inc-item-when"></div>
+          <div class="ks-inc-item-foot"></div>`;
+        item.querySelector(".ks-inc-item-title").textContent = r.empleado;
+        item.querySelector(".ks-inc-item-when").textContent =
+          r.inicio === r.fin ? r.inicio : `${r.inicio} al ${r.fin} · ${r.dias} ${r.dias === 1 ? "día" : "días"}`;
+
+        const foot = item.querySelector(".ks-inc-item-foot");
+        const approveBtn = document.createElement("button");
+        approveBtn.type = "button";
+        approveBtn.className = "ks-vac-btn";
+        approveBtn.dataset.action = "approve";
+        approveBtn.dataset.id = r.id;
+        approveBtn.textContent = "Aprobar";
+        const rejectBtn = document.createElement("button");
+        rejectBtn.type = "button";
+        rejectBtn.className = "ks-vac-btn ks-vac-btn-ghost";
+        rejectBtn.dataset.action = "reject";
+        rejectBtn.dataset.id = r.id;
+        rejectBtn.textContent = "Rechazar";
+        foot.append(approveBtn, rejectBtn);
+        return item;
+      })
+    );
+  }
+
+  async function loadAdmin() {
+    const res = await Portal.get("/vacations/requests");
+    if (res.ok) renderAdmin(res.data.requests);
+  }
+
+  if (user.role === "Administrador" && adminCard) {
+    adminCard.hidden = false;
+    adminListEl.addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-action]");
+      if (!btn) return;
+      btn.disabled = true;
+      const res = await Portal.post(`/vacations/requests/${btn.dataset.id}/${btn.dataset.action}`);
+      if (res.ok) {
+        renderAdmin(res.data.requests);
+      } else {
+        btn.disabled = false;
+        alert((res.data && res.data.error) || "No se pudo procesar la solicitud.");
+      }
+    });
+    loadAdmin();
+  }
 })();

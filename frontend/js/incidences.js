@@ -1,5 +1,5 @@
 (async function () {
-  await Portal.requireSession();
+  const { user } = await Header.init();
   const loaded = await Portal.get("/incidences");
   if (!loaded.ok) {
     const box = document.getElementById("incMessage");
@@ -254,4 +254,80 @@
   renderTypes();
   renderRequests();
   updateForm();
+
+  // Un Administrador no solicita permisos para sí mismo: solo administra los de su equipo.
+  // Por lo tanto no ve el formulario de solicitud ni "Mis solicitudes", solo el panel de aprobación.
+  if (user.role === "Administrador") {
+    $("incStatsBox").hidden = true;
+    $("incGrid").hidden = true;
+    $("incPageTitle").innerHTML = "Solicitudes<br>de permisos";
+    $("incPageLead").textContent = "Aprueba o rechaza las solicitudes de permisos de tu equipo.";
+  }
+
+  // ---- panel de administración (solo Administrador) ----
+  const adminCard = $("incAdminCard");
+  const adminListEl = $("incAdminList");
+
+  function renderAdmin(pending) {
+    if (!pending.length) {
+      adminListEl.innerHTML = '<p class="ks-inc-empty">No hay solicitudes pendientes.</p>';
+      return;
+    }
+    adminListEl.replaceChildren(
+      ...pending.map((r) => {
+        const item = document.createElement("div");
+        item.className = "ks-inc-item";
+        item.innerHTML = `
+          <div class="ks-inc-item-top"><span class="ks-inc-item-title"></span><span class="ks-inc-badge is-proceso">En proceso</span></div>
+          <div class="ks-inc-item-when"></div>
+          <div class="ks-inc-item-comment" hidden></div>
+          <div class="ks-inc-item-foot"></div>`;
+        item.querySelector(".ks-inc-item-title").textContent = `${r.empleado} · ${r.tipoNombre}`;
+        item.querySelector(".ks-inc-item-when").textContent = whenText(r);
+        if (r.comentario) {
+          const c = item.querySelector(".ks-inc-item-comment");
+          c.hidden = false;
+          c.textContent = r.comentario;
+        }
+
+        const foot = item.querySelector(".ks-inc-item-foot");
+        const approveBtn = document.createElement("button");
+        approveBtn.type = "button";
+        approveBtn.className = "ks-vac-btn";
+        approveBtn.dataset.action = "approve";
+        approveBtn.dataset.id = r.id;
+        approveBtn.textContent = "Aprobar";
+        const rejectBtn = document.createElement("button");
+        rejectBtn.type = "button";
+        rejectBtn.className = "ks-vac-btn ks-vac-btn-ghost";
+        rejectBtn.dataset.action = "reject";
+        rejectBtn.dataset.id = r.id;
+        rejectBtn.textContent = "Rechazar";
+        foot.append(approveBtn, rejectBtn);
+        return item;
+      })
+    );
+  }
+
+  async function loadAdmin() {
+    const res = await Portal.get("/incidences/requests");
+    if (res.ok) renderAdmin(res.data.requests);
+  }
+
+  if (user.role === "Administrador" && adminCard) {
+    adminCard.hidden = false;
+    adminListEl.addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-action]");
+      if (!btn) return;
+      btn.disabled = true;
+      const res = await Portal.post(`/incidences/requests/${btn.dataset.id}/${btn.dataset.action}`);
+      if (res.ok) {
+        renderAdmin(res.data.requests);
+      } else {
+        btn.disabled = false;
+        alert((res.data && res.data.error) || "No se pudo procesar la solicitud.");
+      }
+    });
+    loadAdmin();
+  }
 })();

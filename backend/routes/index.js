@@ -34,19 +34,33 @@ router.get("/dashboard", requireAuth, dashboard.index);
 
 // ---- Asistencia y avatar ----
 router.get("/attendance", requireAuth, attendance.index);
-router.get("/avatar{/:id}", requireAuth, avatar.index);
+router.get("/avatar", requireAuth, avatar.index);
+router.patch("/avatar", requireAuth, csrf.verifyToken, avatar.save);
 
 // ---- Engage (comunidad) ----
 router.get("/engage", requireAuth, engage.index);
+router.post("/engage/surveys/:id/vote", requireAuth, csrf.verifyToken, engage.vote);
+router.post("/engage/posts", requireAuth, csrf.verifyToken, engage.createPost);
+router.post("/engage/posts/:id/comments", requireAuth, csrf.verifyToken, engage.addComment);
 
 // ---- Vacaciones ----
 router.get("/vacations", requireAuth, vacations.index);
 router.post("/vacations/requests", requireAuth, csrf.verifyToken, vacations.request);
 
+// ---- Vacaciones: administración (aprobar/rechazar) — solo Administrador ----
+router.get("/vacations/requests", requireAuth, requireAdmin, vacations.adminList);
+router.post("/vacations/requests/:id/approve", requireAuth, requireAdmin, csrf.verifyToken, vacations.approve);
+router.post("/vacations/requests/:id/reject", requireAuth, requireAdmin, csrf.verifyToken, vacations.reject);
+
 // ---- Incidencias (permisos) ----
 router.get("/incidences", requireAuth, incidences.index);
 router.post("/incidences/requests", requireAuth, csrf.verifyToken, incidences.request);
 router.post("/incidences/requests/:id/cancel", requireAuth, csrf.verifyToken, incidences.cancel);
+
+// ---- Incidencias: administración (aprobar/rechazar) — solo Administrador ----
+router.get("/incidences/requests", requireAuth, requireAdmin, incidences.adminList);
+router.post("/incidences/requests/:id/approve", requireAuth, requireAdmin, csrf.verifyToken, incidences.approve);
+router.post("/incidences/requests/:id/reject", requireAuth, requireAdmin, csrf.verifyToken, incidences.reject);
 
 // ---- Notificaciones (kio_tbMensajes) ----
 router.get("/notifications", requireAuth, notifications.list);

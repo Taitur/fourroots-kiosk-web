@@ -79,6 +79,11 @@ async function responder(preguntaId, respondedorId, respuesta) {
   const tx = new sql.Transaction(pool);
   await tx.begin();
   try {
+    const jug = await new sql.Request(tx)
+      .input('resp', sql.Int, respondedorId)
+      .query('SELECT 1 FROM kio_tbJugadores WHERE iIdJugador = @resp;');
+    if (jug.recordset.length === 0) { await tx.rollback(); return false; }
+
     const upd = await new sql.Request(tx)
       .input('id', sql.Int, preguntaId)
       .input('resp', sql.Int, respondedorId)

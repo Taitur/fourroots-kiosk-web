@@ -3,7 +3,7 @@
 // formulario a alguien que de todos modos no podría usarlo.
 (async function () {
   const { esc } = Portal;
-  const user = await Portal.requireSession();
+  const { user } = await Header.init();
   const app = document.getElementById("app");
 
   if (user.role !== "Administrador") {

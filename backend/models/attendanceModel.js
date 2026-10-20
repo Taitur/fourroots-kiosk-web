@@ -2,10 +2,14 @@ const { sql, getConnection } = require("../db");
 
 // Ficha de asistencia de un colaborador: antigüedad y turno vienen de `empleados`,
 // los ascensos de `kio_tbSolIncrementoSueldo` (único movimiento de puesto/sueldo real
-// en la BD). No existe todavía una tabla de marcajes/faltas/tardanzas diarios, así que
-// esas métricas se calculan en cero hasta que exista esa fuente (p. ej. un Kardex real).
+// en la BD), y faltas/tardanzas/tempranas/horas extra de `kio_tbMarcajes` (marcajes
+// diarios; ver scripts/seed_attendance_data.sql).
 
 const MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+// Minutos de tolerancia respecto al horario programado antes de contar
+// una llegada como tarde o temprano.
+const TOLERANCE_MINUTES = 10;
 
 const METRIC_DEFS = [
   { key: "faltas", label: "Faltas", chartTitle: "Faltas por mes", color: "#C1573F", unit: "", tone: "warn",
@@ -79,11 +83,62 @@ async function getPromotions(employeeId) {
   });
 }
 
+// Marcajes diarios reales desde kio_tbMarcajes: cada fila es un día con su
+// horario programado y lo que de verdad marcó el empleado (NULL = falta).
+async function getAttendanceRecords(employeeId, year) {
+  if (!employeeId) return [];
+  const pool = await getConnection();
+  const result = await pool
+    .request()
+    .input("id", sql.Int, employeeId)
+    .input("year", sql.Int, year)
+    .query(`
+      SELECT dtFecha, dtHoraEntradaProgramada, dtHoraSalidaProgramada,
+             dtHoraEntrada, dtHoraSalida, bFalta
+      FROM kio_tbMarcajes
+      WHERE iIdEmpleado = @id AND YEAR(dtFecha) = @year
+      ORDER BY dtFecha`);
+  return result.recordset;
+}
+
+function buildAttendanceMetrics(records, monthCount) {
+  const faltas = new Array(monthCount).fill(0);
+  const tardanzas = new Array(monthCount).fill(0);
+  const tempranas = new Array(monthCount).fill(0);
+  const horasExtra = new Array(monthCount).fill(0);
+
+  records.forEach((r) => {
+    const month = new Date(r.dtFecha).getMonth();
+    if (month >= monthCount) return;
+
+    if (r.bFalta || !r.dtHoraEntrada) {
+      faltas[month]++;
+      return;
+    }
+
+    if (r.dtHoraEntradaProgramada) {
+      const diffMin = (new Date(r.dtHoraEntrada) - new Date(r.dtHoraEntradaProgramada)) / 60000;
+      if (diffMin > TOLERANCE_MINUTES) tardanzas[month]++;
+      else if (diffMin < -TOLERANCE_MINUTES) tempranas[month]++;
+    }
+
+    if (r.dtHoraSalida && r.dtHoraSalidaProgramada) {
+      const extraMin = (new Date(r.dtHoraSalida) - new Date(r.dtHoraSalidaProgramada)) / 60000;
+      if (extraMin > 0) horasExtra[month] += Math.round((extraMin / 60) * 100) / 100;
+    }
+  });
+
+  return { faltas, tardanzas, tempranas, horasExtra };
+}
+
 async function getEmployeeSheet(user) {
   const now = new Date();
   const months = MONTH_LABELS.slice(0, now.getMonth() + 1);
 
-  const promotions = await getPromotions(user.employeeId);
+  const [promotions, records] = await Promise.all([
+    getPromotions(user.employeeId),
+    getAttendanceRecords(user.employeeId, now.getFullYear()),
+  ]);
 
   const ascensosPorMes = new Array(months.length).fill(0);
   promotions.forEach((p) => {
@@ -91,9 +146,10 @@ async function getEmployeeSheet(user) {
     ascensosPorMes[p.rawDate.getMonth()]++;
   });
 
-  const metrics = METRIC_DEFS.map((def) =>
-    withTotals({ ...def, values: def.key === "ascensos" ? ascensosPorMes : new Array(months.length).fill(0) })
-  );
+  const attendance = buildAttendanceMetrics(records, months.length);
+  const valuesByKey = { ...attendance, ascensos: ascensosPorMes };
+
+  const metrics = METRIC_DEFS.map((def) => withTotals({ ...def, values: valuesByKey[def.key] }));
 
   const info = await getEmployeeInfo(user.employeeId);
   const seniority = info && (info.antiguedad_anios || info.antiguedad_meses)
