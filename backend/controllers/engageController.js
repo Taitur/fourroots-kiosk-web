@@ -14,12 +14,13 @@ const kudosFor = (kudos, user) => kudos.map((k) => ({ ...k, canDelete: k.giverId
 // GET /api/engage — feed, encuestas, aplausos y cumpleaños del día.
 async function index(req, res) {
   const user = req.session.user;
-  const [feed, surveys, kudos, birthdays, posts] = await Promise.all([
+  const [feed, surveys, kudos, birthdays, posts, tips] = await Promise.all([
     engageModel.getFeed(),
     engageModel.getSurveys(user.id),
     engageModel.getKudos(),
-    engageModel.getBirthdaysToday(),
+    engageModel.getBirthdays(),
     engageModel.getPosts(),
+    engageModel.getTips(user.id),
   ]);
 
   const feedWithPerms = feedFor(feed, user);
@@ -30,7 +31,47 @@ async function index(req, res) {
     kudos: kudosFor(kudos, user),
     birthdays,
     posts,
+    tips,
   });
+}
+
+// POST /api/engage/birthdays/:id/messages   body: { texto }  (:id = recursos.id)
+async function addBirthdayMessage(req, res) {
+  const recursoId = Number(req.params.id);
+  if (!Number.isInteger(recursoId)) {
+    return res.status(400).json({ error: "Compañero inválido." });
+  }
+
+  const texto = req.body && req.body.texto;
+  const result = await engageModel.addBirthdayMessage(req.session.user.id, recursoId, texto);
+  if (!result.ok) return res.status(400).json({ error: result.error });
+
+  const birthdays = await engageModel.getBirthdays();
+  res.json({ birthdays });
+}
+
+// POST /api/engage/tips   body: { texto }
+async function createTip(req, res) {
+  const texto = req.body && req.body.texto;
+  const result = await engageModel.createTip(req.session.user.id, texto);
+  if (!result.ok) return res.status(400).json({ error: result.error });
+
+  const tips = await engageModel.getTips(req.session.user.id);
+  res.json({ tips });
+}
+
+// POST /api/engage/tips/:id/vote — apoya o retira el apoyo
+async function voteTip(req, res) {
+  const tipId = Number(req.params.id);
+  if (!Number.isInteger(tipId)) {
+    return res.status(400).json({ error: "Consejo inválido." });
+  }
+
+  const result = await engageModel.toggleTipVote(req.session.user.id, tipId);
+  if (!result.ok) return res.status(404).json({ error: result.error });
+
+  const tips = await engageModel.getTips(req.session.user.id);
+  res.json({ tips });
 }
 
 // POST /api/engage/posts   body: { texto }
@@ -185,4 +226,7 @@ module.exports = {
   deleteAnnouncement,
   createKudos,
   removeKudos,
+  addBirthdayMessage,
+  createTip,
+  voteTip,
 };

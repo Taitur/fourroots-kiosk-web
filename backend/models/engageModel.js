@@ -217,20 +217,146 @@ async function deleteKudos(userId, isAdmin, kudosId) {
   return { ok: true };
 }
 
-// Cumpleaños de hoy, según la fecha de nacimiento en `recursos`.
-async function getBirthdaysToday() {
+// Cumpleaños de todo el año (fecha de nacimiento en `recursos`), ordenados por
+// mes y día, con los mensajes que recibió este año (kio_tbEngageCumpleMensajes).
+async function getBirthdays() {
   const pool = await getConnection();
   const result = await pool.request().query(`
-    SELECT r.id, r.nombre, r.paterno, r.materno
+    SELECT r.id, r.nombre, r.paterno, r.materno,
+           MONTH(r.fecha_nacimiento) AS mes, DAY(r.fecha_nacimiento) AS dia
     FROM recursos r
     WHERE r.fecha_nacimiento IS NOT NULL
-      AND MONTH(r.fecha_nacimiento) = MONTH(GETDATE())
-      AND DAY(r.fecha_nacimiento) = DAY(GETDATE())`);
+    ORDER BY MONTH(r.fecha_nacimiento), DAY(r.fecha_nacimiento)`);
+
+  const hoy = new Date();
+  const people = result.recordset.map((row) => ({
+    id: row.id,
+    name: fullName(row.nombre, row.paterno, row.materno),
+    month: row.mes,
+    day: row.dia,
+    isToday: row.mes === hoy.getMonth() + 1 && row.dia === hoy.getDate(),
+    messages: [],
+  }));
+  if (!people.length) return people;
+
+  const byId = {};
+  people.forEach((p) => { byId[p.id] = p; });
+
+  const mensajes = await pool.request().query(`
+    SELECT m.iIdRecurso AS recursoId, m.vcMensaje AS mensaje, m.dtFechaRegistro AS fecha,
+           r.nombre, r.paterno, r.materno
+    FROM kio_tbEngageCumpleMensajes m
+    LEFT JOIN kio_tbUsuarios u ON u.iIdUsuario = m.iIdAutor
+    LEFT JOIN recursos r ON r.id = u.iId
+    WHERE YEAR(m.dtFechaRegistro) = YEAR(GETDATE())
+    ORDER BY m.dtFechaRegistro ASC`);
+
+  for (const row of mensajes.recordset) {
+    const person = byId[row.recursoId];
+    if (!person) continue;
+    person.messages.push({
+      text: row.mensaje,
+      author: fullName(row.nombre, row.paterno, row.materno) || "Eslabón",
+      time: relativeTime(row.fecha),
+    });
+  }
+
+  return people;
+}
+
+// Deja un mensaje de cumpleaños a un compañero (recursos.id).
+async function addBirthdayMessage(userId, recursoId, mensaje) {
+  const limpio = (mensaje || "").trim();
+  if (!limpio) return { ok: false, error: "Escribe un mensaje." };
+  if (limpio.length > 300) return { ok: false, error: "El mensaje es demasiado largo (máximo 300 caracteres)." };
+
+  const pool = await getConnection();
+  const existe = await pool
+    .request()
+    .input("recurso", sql.Int, recursoId)
+    .query(`SELECT id FROM recursos WHERE id = @recurso AND fecha_nacimiento IS NOT NULL`);
+  if (!existe.recordset.length) {
+    return { ok: false, error: "Ese compañero no existe." };
+  }
+
+  await pool
+    .request()
+    .input("recurso", sql.Int, recursoId)
+    .input("autor", sql.Int, userId)
+    .input("mensaje", sql.NVarChar(300), limpio)
+    .query(`
+      INSERT INTO kio_tbEngageCumpleMensajes (iIdRecurso, iIdAutor, vcMensaje)
+      VALUES (@recurso, @autor, @mensaje)`);
+
+  return { ok: true };
+}
+
+// Consejos de bienestar activos, del más apoyado al menos apoyado.
+async function getTips(userId) {
+  const pool = await getConnection();
+  const result = await pool
+    .request()
+    .input("usuario", sql.Int, userId)
+    .query(`
+      SELECT c.iIdConsejo AS id, c.vcTexto AS texto, c.dtFechaRegistro AS fecha,
+             r.nombre, r.paterno, r.materno,
+             (SELECT COUNT(*) FROM kio_tbEngageConsejosVotos v WHERE v.iIdConsejo = c.iIdConsejo) AS votos,
+             (SELECT COUNT(*) FROM kio_tbEngageConsejosVotos v WHERE v.iIdConsejo = c.iIdConsejo AND v.iIdUsuario = @usuario) AS miVoto
+      FROM kio_tbEngageConsejos c
+      LEFT JOIN kio_tbUsuarios u ON u.iIdUsuario = c.iIdAutor
+      LEFT JOIN recursos r ON r.id = u.iId
+      WHERE c.bActivo = 1
+      ORDER BY votos DESC, c.dtFechaRegistro DESC`);
 
   return result.recordset.map((row) => ({
     id: row.id,
-    name: fullName(row.nombre, row.paterno, row.materno),
+    text: row.texto,
+    author: fullName(row.nombre, row.paterno, row.materno) || "Eslabón",
+    time: relativeTime(row.fecha),
+    votes: row.votos,
+    voted: row.miVoto > 0,
   }));
+}
+
+// Propone un consejo de bienestar nuevo.
+async function createTip(userId, texto) {
+  const limpio = (texto || "").trim();
+  if (!limpio) return { ok: false, error: "Escribe tu consejo." };
+  if (limpio.length > 500) return { ok: false, error: "El consejo es demasiado largo (máximo 500 caracteres)." };
+
+  const pool = await getConnection();
+  await pool
+    .request()
+    .input("autor", sql.Int, userId)
+    .input("texto", sql.NVarChar(500), limpio)
+    .query(`INSERT INTO kio_tbEngageConsejos (iIdAutor, vcTexto) VALUES (@autor, @texto)`);
+
+  return { ok: true };
+}
+
+// Apoya un consejo, o retira el apoyo si ya lo había dado.
+async function toggleTipVote(userId, consejoId) {
+  const pool = await getConnection();
+  const result = await pool
+    .request()
+    .input("consejo", sql.Int, consejoId)
+    .input("usuario", sql.Int, userId)
+    .query(`
+      IF NOT EXISTS (SELECT 1 FROM kio_tbEngageConsejos WHERE iIdConsejo = @consejo AND bActivo = 1)
+        SELECT 0 AS ok
+      ELSE IF EXISTS (SELECT 1 FROM kio_tbEngageConsejosVotos WHERE iIdConsejo = @consejo AND iIdUsuario = @usuario)
+      BEGIN
+        DELETE FROM kio_tbEngageConsejosVotos WHERE iIdConsejo = @consejo AND iIdUsuario = @usuario;
+        SELECT 1 AS ok
+      END
+      ELSE
+      BEGIN
+        INSERT INTO kio_tbEngageConsejosVotos (iIdConsejo, iIdUsuario) VALUES (@consejo, @usuario);
+        SELECT 1 AS ok
+      END`);
+
+  if (!result.recordset[0].ok) return { ok: false, error: "El consejo ya no existe." };
+  return { ok: true };
 }
 
 // Registra el voto del usuario en una encuesta vigente, incluyendo la opción
@@ -393,7 +519,11 @@ module.exports = {
   getKudos,
   giveKudos,
   deleteKudos,
-  getBirthdaysToday,
+  getBirthdays,
+  addBirthdayMessage,
+  getTips,
+  createTip,
+  toggleTipVote,
   castVote,
   getPosts,
   createPost,
