@@ -1,12 +1,15 @@
 const { sql, getConnection } = require("../db");
 
 // Ficha de asistencia de un colaborador: antigüedad y turno vienen de `empleados`,
-// los ascensos de `kio_tbSolIncrementoSueldo` y faltas, retardos y llegadas temprano de la
-// tabla `Asistencias` (un registro por día y empleado, con Tipo Falta, Retardo, Temprano o
-// Puntual). `Asistencias` no tiene columna de horas: las horas extra que da el administrador se
-// guardan en su columna Observaciones con la marca [HE:2.5] (ver OVERTIME_RE) y de ahí se suman.
+// los ascensos de `kio_tbSolIncrementoSueldo` (único movimiento de puesto/sueldo real
+// en la BD), y faltas/tardanzas/tempranas/horas extra de `kio_tbMarcajes` (marcajes
+// diarios; ver scripts/seed_attendance_data.sql).
 
 const MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+// Minutos de tolerancia respecto al horario programado antes de contar
+// una llegada como tarde o temprano.
+const TOLERANCE_MINUTES = 10;
 
 const METRIC_DEFS = [
   { key: "faltas", label: "Faltas", chartTitle: "Faltas por mes", color: "#C1573F", unit: "", tone: "warn",
@@ -84,78 +87,62 @@ async function getPromotions(employeeId) {
   });
 }
 
-// Horas extra dentro de Observaciones: "[HE:2.5]" al final del texto (máx. 200 caracteres en total).
-const OVERTIME_RE = /\s*\[HE:(\d+(?:\.\d+)?)\]/g;
-const MAX_HORAS_EXTRA = 12;
-
-function overtimeOf(observations) {
-  const match = /\[HE:(\d+(?:\.\d+)?)\]/.exec(String(observations || ""));
-  return match ? Number(match[1]) : 0;
-}
-
-// Devuelve el texto de Observaciones con las horas extra indicadas (0 las quita).
-function withOvertime(observations, hours) {
-  const base = String(observations || "").replace(OVERTIME_RE, "").trim();
-  if (!hours) return base;
-  const mark = `[HE:${hours}]`;
-  return (base.slice(0, 200 - mark.length - 1) + " " + mark).trim();
-}
-
-// Columna Tipo de Asistencias -> clave de métrica de la ficha.
-const TIPO_A_METRICA = { falta: "faltas", retardo: "tardanzas", temprano: "tempranas" };
-
-// Conteo mensual de faltas, retardos y llegadas temprano del año indicado (enero hasta `monthCount`).
-// Devuelve { faltas: [..], tardanzas: [..], tempranas: [..] } con un valor por mes.
-async function getAttendanceByMonth(user, year, monthCount) {
-  const counts = { faltas: [], tardanzas: [], tempranas: [], horasExtra: [] };
-  Object.keys(counts).forEach((k) => { counts[k] = new Array(monthCount).fill(0); });
-  if (!user.employeeId) return counts;
-
+// Marcajes diarios reales desde kio_tbMarcajes: cada fila es un día con su
+// horario programado y lo que de verdad marcó el empleado (NULL = falta).
+async function getAttendanceRecords(employeeId, year) {
+  if (!employeeId) return [];
   const pool = await getConnection();
   const result = await pool
     .request()
-    .input("compania", sql.Int, user.companyId || null)
-    .input("empleado", sql.Int, user.employeeId)
-    .input("anio", sql.Int, year)
+    .input("id", sql.Int, employeeId)
+    .input("year", sql.Int, year)
     .query(`
-      SELECT MONTH(Fecha) AS mes, Tipo AS tipo, COUNT(*) AS total
-      FROM Asistencias
-      WHERE IdEmpleado = @empleado
-        AND (@compania IS NULL OR Compania = @compania)
-        AND Fecha >= DATEFROMPARTS(@anio, 1, 1) AND Fecha < DATEFROMPARTS(@anio + 1, 1, 1)
-      GROUP BY MONTH(Fecha), Tipo`);
+      SELECT dtFecha, dtHoraEntradaProgramada, dtHoraSalidaProgramada,
+             dtHoraEntrada, dtHoraSalida, bFalta
+      FROM kio_tbMarcajes
+      WHERE iIdEmpleado = @id AND YEAR(dtFecha) = @year
+      ORDER BY dtFecha`);
+  return result.recordset;
+}
 
-  result.recordset.forEach((row) => {
-    const key = TIPO_A_METRICA[String(row.tipo || "").trim().toLowerCase()];
-    const index = Number(row.mes) - 1;
-    if (key && index >= 0 && index < monthCount) counts[key][index] += Number(row.total) || 0;
+function buildAttendanceMetrics(records, monthCount) {
+  const faltas = new Array(monthCount).fill(0);
+  const tardanzas = new Array(monthCount).fill(0);
+  const tempranas = new Array(monthCount).fill(0);
+  const horasExtra = new Array(monthCount).fill(0);
+
+  records.forEach((r) => {
+    const month = new Date(r.dtFecha).getMonth();
+    if (month >= monthCount) return;
+
+    if (r.bFalta || !r.dtHoraEntrada) {
+      faltas[month]++;
+      return;
+    }
+
+    if (r.dtHoraEntradaProgramada) {
+      const diffMin = (new Date(r.dtHoraEntrada) - new Date(r.dtHoraEntradaProgramada)) / 60000;
+      if (diffMin > TOLERANCE_MINUTES) tardanzas[month]++;
+      else if (diffMin < -TOLERANCE_MINUTES) tempranas[month]++;
+    }
+
+    if (r.dtHoraSalida && r.dtHoraSalidaProgramada) {
+      const extraMin = (new Date(r.dtHoraSalida) - new Date(r.dtHoraSalidaProgramada)) / 60000;
+      if (extraMin > 0) horasExtra[month] += Math.round((extraMin / 60) * 100) / 100;
+    }
   });
 
-  // Horas extra: marca [HE:n] en Observaciones de los registros del año.
-  const overtime = await pool
-    .request()
-    .input("compania", sql.Int, user.companyId || null)
-    .input("empleado", sql.Int, user.employeeId)
-    .input("anio", sql.Int, year)
-    .query(`
-      SELECT MONTH(Fecha) AS mes, Observaciones AS observaciones
-      FROM Asistencias
-      WHERE IdEmpleado = @empleado
-        AND (@compania IS NULL OR Compania = @compania)
-        AND Fecha >= DATEFROMPARTS(@anio, 1, 1) AND Fecha < DATEFROMPARTS(@anio + 1, 1, 1)
-        AND Observaciones LIKE '%[[]HE:%'`);
-  overtime.recordset.forEach((row) => {
-    const index = Number(row.mes) - 1;
-    if (index >= 0 && index < monthCount) counts.horasExtra[index] += overtimeOf(row.observaciones);
-  });
-  return counts;
+  return { faltas, tardanzas, tempranas, horasExtra };
 }
 
 async function getEmployeeSheet(user) {
   const now = new Date();
   const months = MONTH_LABELS.slice(0, now.getMonth() + 1);
 
-  const promotions = await getPromotions(user.employeeId);
+  const [promotions, records] = await Promise.all([
+    getPromotions(user.employeeId),
+    getAttendanceRecords(user.employeeId, now.getFullYear()),
+  ]);
 
   const ascensosPorMes = new Array(months.length).fill(0);
   promotions.forEach((p) => {
@@ -163,7 +150,7 @@ async function getEmployeeSheet(user) {
     ascensosPorMes[p.rawDate.getMonth()]++;
   });
 
-  const attendance = await getAttendanceByMonth(user, now.getFullYear(), months.length);
+  const attendance = buildAttendanceMetrics(records, months.length);
 
   const metrics = METRIC_DEFS.map((def) =>
     withTotals({
@@ -208,11 +195,10 @@ async function getEmployeeSheet(user) {
 // Administrador: ver y editar la ficha de cualquier colaborador.
 // ---------------------------------------------------------------------------------------------
 
-// Valores que guarda la columna Tipo de Asistencias.
+// Tipos de asistencia que el administrador puede poner a un día.
 const TIPOS_ASISTENCIA = ["Falta", "Retardo", "Temprano", "Puntual"];
 const MAX_MOTIVO = 200;
-// Observaciones de los registros que crea el administrador (columna Observaciones, varchar(200)).
-const OBSERVACION_ADMIN = "Registrado por el administrador";
+const MAX_HORAS_EXTRA = 12;
 
 function initialsOf(name) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("");
@@ -250,36 +236,57 @@ async function getUserIdentity(userId) {
   };
 }
 
-// Registros de la tabla Asistencias en un mes (month = "YYYY-MM"): un renglón por día que tenga registro.
+// Tipo de un marcaje con la misma regla que buildAttendanceMetrics (falta, retardo, temprano o puntual).
+function classifyMarcaje(r) {
+  if (r.bFalta || !r.dtHoraEntrada) return "Falta";
+  if (r.dtHoraEntradaProgramada) {
+    const diffMin = (new Date(r.dtHoraEntrada) - new Date(r.dtHoraEntradaProgramada)) / 60000;
+    if (diffMin > TOLERANCE_MINUTES) return "Retardo";
+    if (diffMin < -TOLERANCE_MINUTES) return "Temprano";
+  }
+  return "Puntual";
+}
+
+// Horas extra de un marcaje: lo que pasó la salida real de la programada (redondeado a cuartos de hora).
+function overtimeOfMarcaje(r) {
+  if (r.bFalta || !r.dtHoraEntrada || !r.dtHoraSalida || !r.dtHoraSalidaProgramada) return 0;
+  const extraMin = (new Date(r.dtHoraSalida) - new Date(r.dtHoraSalidaProgramada)) / 60000;
+  return extraMin > 0 ? Math.round(extraMin / 15) / 4 : 0;
+}
+
+// Marcajes de kio_tbMarcajes en un mes (month = "YYYY-MM"): un renglón por día que tenga marcaje.
 async function listRecords(identity, month) {
   const pool = await getConnection();
   const result = await pool
     .request()
-    .input("compania", sql.Int, identity.companyId || null)
     .input("empleado", sql.Int, identity.employeeId)
     .input("inicio", sql.VarChar(10), month + "-01")
     .query(`
-      SELECT CONVERT(varchar(10), CAST(Fecha AS date), 23) AS fecha, Tipo AS tipo, Observaciones AS observaciones
-      FROM Asistencias
-      WHERE IdEmpleado = @empleado
-        AND (@compania IS NULL OR Compania = @compania)
-        AND CAST(Fecha AS date) >= CAST(@inicio AS date)
-        AND CAST(Fecha AS date) < DATEADD(month, 1, CAST(@inicio AS date))
-      ORDER BY Fecha`);
+      SELECT CONVERT(varchar(10), dtFecha, 23) AS fecha, dtHoraEntradaProgramada, dtHoraSalidaProgramada,
+             dtHoraEntrada, dtHoraSalida, bFalta
+      FROM kio_tbMarcajes
+      WHERE iIdEmpleado = @empleado
+        AND dtFecha >= CAST(@inicio AS date)
+        AND dtFecha < DATEADD(month, 1, CAST(@inicio AS date))
+      ORDER BY dtFecha`);
   return result.recordset.map((r) => ({
     date: r.fecha,
-    type: String(r.tipo || "").trim(),
-    overtime: overtimeOf(r.observaciones),
+    type: classifyMarcaje(r),
+    overtime: overtimeOfMarcaje(r),
   }));
 }
 
-// Guarda el día en la tabla Asistencias: cambia el tipo y/o las horas extra del registro que ya existe,
-// o crea el registro si ese día no tenía (con Tipo "Puntual" si solo se dan horas extra).
-// Es la misma tabla de la que lee la ficha del colaborador, así que el cambio se ve en su ficha.
-// Columnas: IdAsistencia (PK), Compania, IdEmpleado, Fecha, HoraEntrada, Tipo, Observaciones.
-// Si IdAsistencia es IDENTITY lo genera la base; si no, se toma el siguiente id bajo bloqueo
-// (igual que en las demás tablas heredadas, ver userModel.createUser). Un registro nuevo lleva
-// HoraEntrada vacía (o 00:00 si la columna no admite NULL) y una observación que lo marca como del admin.
+// Minutos de desfase de la entrada respecto a la programada para cada tipo (fuera de la tolerancia).
+const DESFASE_ENTRADA = { Puntual: 0, Retardo: 25, Temprano: -20 };
+
+// Guarda el día en kio_tbMarcajes, la misma tabla de la que lee la ficha del colaborador, así que el
+// cambio se ve en su ficha. No hay columna de tipo ni de horas extra: se traducen a las horas del marcaje.
+//  - Falta: bFalta = 1 y sin hora de entrada ni salida.
+//  - Retardo / Temprano / Puntual: la entrada real queda 25 min después / 20 min antes / a la hora de la
+//    programada (solo si el tipo cambia; si no, se respeta la hora que ya tenía).
+//  - Horas extra: la salida real queda esas horas después de la salida programada.
+// Si el día no tenía marcaje se crea con el mismo horario programado del último marcaje del empleado
+// (09:00 a 18:00 si no tiene ninguno) y la compañía del usuario.
 // type: Falta/Retardo/Temprano/Puntual o undefined para no cambiarlo; overtime: horas o undefined.
 async function setRecord(identity, date, { type, overtime }) {
   const pool = await getConnection();
@@ -287,44 +294,77 @@ async function setRecord(identity, date, { type, overtime }) {
   await tx.begin();
   try {
     const existing = await new sql.Request(tx)
-      .input("compania", sql.Int, identity.companyId || null)
       .input("empleado", sql.Int, identity.employeeId)
       .input("fecha", sql.VarChar(10), date)
       .query(`
-        SELECT IdAsistencia AS id, Tipo AS tipo, Observaciones AS observaciones
-        FROM Asistencias WITH (UPDLOCK, HOLDLOCK)
-        WHERE IdEmpleado = @empleado
-          AND (@compania IS NULL OR Compania = @compania)
-          AND CAST(Fecha AS date) = CAST(@fecha AS date)`);
+        SELECT iIdMarcaje AS id, dtHoraEntradaProgramada, dtHoraSalidaProgramada, dtHoraEntrada, dtHoraSalida, bFalta
+        FROM kio_tbMarcajes WITH (UPDLOCK, HOLDLOCK)
+        WHERE iIdEmpleado = @empleado AND dtFecha = CAST(@fecha AS date)`);
+    const row = existing.recordset[0];
 
-    if (existing.recordset.length) {
-      for (const row of existing.recordset) {
-        await new sql.Request(tx)
-          .input("id", sql.Int, row.id)
-          .input("tipo", sql.VarChar(15), type || String(row.tipo || "").trim())
-          .input("observaciones", sql.VarChar(200), overtime === undefined ? row.observaciones || "" : withOvertime(row.observaciones, overtime))
-          .query(`UPDATE Asistencias SET Tipo = @tipo, Observaciones = @observaciones WHERE IdAsistencia = @id`);
+    const currentType = row ? classifyMarcaje(row) : null;
+    const newType = type || currentType || "Puntual";
+    const isFalta = newType === "Falta";
+    const currentOvertime = row ? overtimeOfMarcaje(row) : 0;
+    const hours = overtime === undefined ? currentOvertime : overtime;
+    if (isFalta && hours > 0) {
+      const err = new Error("Un día de falta no puede tener horas extra.");
+      err.status = 400;
+      throw err;
+    }
+
+    // Desfases en minutos contra el horario programado (null = sin marcar).
+    let entradaMin = null;
+    let salidaMin = null;
+    if (!isFalta) {
+      if (row && newType === currentType && row.dtHoraEntrada && row.dtHoraEntradaProgramada) {
+        entradaMin = Math.round((new Date(row.dtHoraEntrada) - new Date(row.dtHoraEntradaProgramada)) / 60000);
+      } else {
+        entradaMin = DESFASE_ENTRADA[newType];
       }
+      const currentSalidaMin = row && row.dtHoraSalida && row.dtHoraSalidaProgramada
+        ? Math.round((new Date(row.dtHoraSalida) - new Date(row.dtHoraSalidaProgramada)) / 60000)
+        : 0;
+      if (hours > 0) salidaMin = Math.round(hours * 60);
+      else salidaMin = currentSalidaMin < 0 ? currentSalidaMin : 0;
+    }
+
+    const request = new sql.Request(tx)
+      .input("empleado", sql.Int, identity.employeeId)
+      .input("compania", sql.Int, identity.companyId || 1)
+      .input("fecha", sql.VarChar(10), date)
+      .input("falta", sql.Bit, isFalta)
+      .input("entradaMin", sql.Int, entradaMin)
+      .input("salidaMin", sql.Int, salidaMin);
+
+    if (row) {
+      await request.input("id", sql.Int, row.id).query(`
+        DECLARE @dia datetime = CAST(CAST(@fecha AS date) AS datetime);
+        DECLARE @pe datetime = ISNULL((SELECT dtHoraEntradaProgramada FROM kio_tbMarcajes WHERE iIdMarcaje = @id), DATEADD(hour, 9, @dia));
+        DECLARE @ps datetime = ISNULL((SELECT dtHoraSalidaProgramada FROM kio_tbMarcajes WHERE iIdMarcaje = @id), DATEADD(hour, 18, @dia));
+        UPDATE kio_tbMarcajes
+           SET dtHoraEntradaProgramada = @pe,
+               dtHoraSalidaProgramada = @ps,
+               dtHoraEntrada = CASE WHEN @entradaMin IS NULL THEN NULL ELSE DATEADD(minute, @entradaMin, @pe) END,
+               dtHoraSalida = CASE WHEN @salidaMin IS NULL THEN NULL ELSE DATEADD(minute, @salidaMin, @ps) END,
+               bFalta = @falta
+         WHERE iIdMarcaje = @id`);
     } else {
-      await new sql.Request(tx)
-        .input("companiaNueva", sql.Int, identity.companyId || 0)
-        .input("empleado", sql.Int, identity.employeeId)
-        .input("fecha", sql.VarChar(10), date)
-        .input("tipo", sql.VarChar(15), type || "Puntual")
-        .input("observaciones", sql.VarChar(200), withOvertime(OBSERVACION_ADMIN, overtime || 0))
-        .query(`
-          DECLARE @esIdentity int = COLUMNPROPERTY(OBJECT_ID('Asistencias'), 'IdAsistencia', 'IsIdentity');
-          DECLARE @horaEntrada time = CASE WHEN COLUMNPROPERTY(OBJECT_ID('Asistencias'), 'HoraEntrada', 'AllowsNull') = 1
-                                           THEN NULL ELSE CAST('00:00:00' AS time) END;
-          IF @esIdentity = 1
-            INSERT INTO Asistencias (Compania, IdEmpleado, Fecha, HoraEntrada, Tipo, Observaciones)
-            VALUES (@companiaNueva, @empleado, CAST(@fecha AS date), @horaEntrada, @tipo, @observaciones);
-          ELSE
-          BEGIN
-            DECLARE @nuevoId int = (SELECT ISNULL(MAX(IdAsistencia), 0) + 1 FROM Asistencias WITH (UPDLOCK, HOLDLOCK));
-            INSERT INTO Asistencias (IdAsistencia, Compania, IdEmpleado, Fecha, HoraEntrada, Tipo, Observaciones)
-            VALUES (@nuevoId, @companiaNueva, @empleado, CAST(@fecha AS date), @horaEntrada, @tipo, @observaciones);
-          END`);
+      await request.query(`
+        DECLARE @dia datetime = CAST(CAST(@fecha AS date) AS datetime);
+        DECLARE @minE int = ISNULL((SELECT TOP 1 DATEDIFF(minute, CAST(dtFecha AS datetime), dtHoraEntradaProgramada)
+                                    FROM kio_tbMarcajes WHERE iIdEmpleado = @empleado AND dtHoraEntradaProgramada IS NOT NULL
+                                    ORDER BY dtFecha DESC), 540);
+        DECLARE @minS int = ISNULL((SELECT TOP 1 DATEDIFF(minute, CAST(dtFecha AS datetime), dtHoraSalidaProgramada)
+                                    FROM kio_tbMarcajes WHERE iIdEmpleado = @empleado AND dtHoraSalidaProgramada IS NOT NULL
+                                    ORDER BY dtFecha DESC), 1080);
+        INSERT INTO kio_tbMarcajes
+          (iIdEmpleado, iIdCompania, dtFecha, dtHoraEntradaProgramada, dtHoraSalidaProgramada, dtHoraEntrada, dtHoraSalida, bFalta)
+        VALUES (@empleado, @compania, CAST(@fecha AS date),
+                DATEADD(minute, @minE, @dia), DATEADD(minute, @minS, @dia),
+                CASE WHEN @entradaMin IS NULL THEN NULL ELSE DATEADD(minute, @minE + @entradaMin, @dia) END,
+                CASE WHEN @salidaMin IS NULL THEN NULL ELSE DATEADD(minute, @minS + @salidaMin, @dia) END,
+                @falta)`);
     }
     await tx.commit();
   } catch (err) {
@@ -337,14 +377,9 @@ async function deleteRecord(identity, date) {
   const pool = await getConnection();
   const result = await pool
     .request()
-    .input("compania", sql.Int, identity.companyId || null)
     .input("empleado", sql.Int, identity.employeeId)
     .input("fecha", sql.VarChar(10), date)
-    .query(`
-      DELETE FROM Asistencias
-      WHERE IdEmpleado = @empleado
-        AND (@compania IS NULL OR Compania = @compania)
-        AND CAST(Fecha AS date) = CAST(@fecha AS date)`);
+    .query(`DELETE FROM kio_tbMarcajes WHERE iIdEmpleado = @empleado AND dtFecha = CAST(@fecha AS date)`);
   return result.rowsAffected[0];
 }
 

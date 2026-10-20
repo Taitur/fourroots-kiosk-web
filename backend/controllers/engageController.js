@@ -14,11 +14,13 @@ const kudosFor = (kudos, user) => kudos.map((k) => ({ ...k, canDelete: k.giverId
 // GET /api/engage — feed, encuestas, aplausos y cumpleaños del día.
 async function index(req, res) {
   const user = req.session.user;
-  const [feed, surveys, kudos, birthdays] = await Promise.all([
+  const [feed, surveys, kudos, birthdays, posts, tips] = await Promise.all([
     engageModel.getFeed(),
     engageModel.getSurveys(user.id),
     engageModel.getKudos(),
-    engageModel.getBirthdaysToday(),
+    engageModel.getBirthdays(),
+    engageModel.getPosts(),
+    engageModel.getTips(user.id),
   ]);
 
   const feedWithPerms = feedFor(feed, user);
@@ -28,97 +30,203 @@ async function index(req, res) {
     surveys,
     kudos: kudosFor(kudos, user),
     birthdays,
+    posts,
+    tips,
   });
 }
 
-// Valida título y texto de una noticia. Devuelve { error } o { title, text }.
-function readNewsBody(body) {
-  const title = typeof (body && body.title) === "string" ? body.title.trim() : "";
-  const text = typeof (body && body.text) === "string" ? body.text.trim() : "";
-  if (!title) return { error: "El título es obligatorio." };
-  if (title.length > MAX_TITULO) return { error: `El título no puede pasar de ${MAX_TITULO} caracteres.` };
-  if (!text) return { error: "El texto es obligatorio." };
-  if (text.length > MAX_TEXTO) return { error: `El texto no puede pasar de ${MAX_TEXTO} caracteres.` };
-  return { title, text };
-}
-
-// POST /api/engage/news   body: { title, text }
-async function createNews(req, res) {
-  const user = req.session.user;
-  const data = readNewsBody(req.body);
-  if (data.error) return res.status(400).json({ error: data.error });
-
-  await engageModel.createNews(user.id, data);
-  res.status(201).json({ feed: feedFor(await engageModel.getFeed(), user) });
-}
-
-// PATCH /api/engage/news/:id   body: { title, text }
-async function updateNews(req, res) {
-  const user = req.session.user;
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) return res.status(400).json({ error: "Publicación inválida." });
-
-  const data = readNewsBody(req.body);
-  if (data.error) return res.status(400).json({ error: data.error });
-
-  const result = await engageModel.updateNews(user.id, isAdmin(user), id, data);
-  if (!result.ok) return res.status(404).json({ error: result.error });
-
-  res.json({ feed: feedFor(await engageModel.getFeed(), user) });
-}
-
-// DELETE /api/engage/news/:id — baja lógica
-async function deleteNews(req, res) {
-  const user = req.session.user;
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) return res.status(400).json({ error: "Publicación inválida." });
-
-  const result = await engageModel.deleteNews(user.id, isAdmin(user), id);
-  if (!result.ok) return res.status(404).json({ error: result.error });
-
-  res.json({ feed: feedFor(await engageModel.getFeed(), user) });
-}
-
-// POST /api/engage/surveys/:id/vote   body: { optionId }
-async function vote(req, res) {
-  const surveyId = Number(req.params.id);
-  const optionId = Number(req.body && req.body.optionId);
-  if (!Number.isInteger(surveyId) || !Number.isInteger(optionId)) {
-    return res.status(400).json({ error: "Datos inválidos." });
+// POST /api/engage/birthdays/:id/messages   body: { texto }  (:id = recursos.id)
+async function addBirthdayMessage(req, res) {
+  const recursoId = Number(req.params.id);
+  if (!Number.isInteger(recursoId)) {
+    return res.status(400).json({ error: "Compañero inválido." });
   }
 
-  const userId = req.session.user.id;
-  const result = await engageModel.voteSurvey(userId, surveyId, optionId);
-  if (!result.ok) return res.status(409).json({ error: result.error });
+  const texto = req.body && req.body.texto;
+  const result = await engageModel.addBirthdayMessage(req.session.user.id, recursoId, texto);
+  if (!result.ok) return res.status(400).json({ error: result.error });
 
-  res.json({ surveys: await engageModel.getSurveys(userId) });
+  const birthdays = await engageModel.getBirthdays();
+  res.json({ birthdays });
 }
 
-// POST /api/engage/kudos   body: { name, message? }
-async function giveKudos(req, res) {
-  const user = req.session.user;
-  const body = req.body || {};
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  const message = typeof body.message === "string" ? body.message.trim() : "";
+// POST /api/engage/tips   body: { texto }
+async function createTip(req, res) {
+  const texto = req.body && req.body.texto;
+  const result = await engageModel.createTip(req.session.user.id, texto);
+  if (!result.ok) return res.status(400).json({ error: result.error });
 
-  if (!name) return res.status(400).json({ error: "Indica a quién quieres reconocer." });
-  if (name.length > MAX_NOMBRE) return res.status(400).json({ error: `El nombre no puede pasar de ${MAX_NOMBRE} caracteres.` });
-  if (message.length > MAX_MENSAJE) return res.status(400).json({ error: `El mensaje no puede pasar de ${MAX_MENSAJE} caracteres.` });
-
-  await engageModel.giveKudos(user.id, { name, message });
-  res.status(201).json({ kudos: kudosFor(await engageModel.getKudos(), user) });
+  const tips = await engageModel.getTips(req.session.user.id);
+  res.json({ tips });
 }
 
-// DELETE /api/engage/kudos/:id — retira un aplauso (baja lógica)
-async function deleteKudos(req, res) {
-  const user = req.session.user;
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) return res.status(400).json({ error: "Aplauso inválido." });
+// POST /api/engage/tips/:id/vote — apoya o retira el apoyo
+async function voteTip(req, res) {
+  const tipId = Number(req.params.id);
+  if (!Number.isInteger(tipId)) {
+    return res.status(400).json({ error: "Consejo inválido." });
+  }
 
-  const result = await engageModel.deleteKudos(user.id, isAdmin(user), id);
+  const result = await engageModel.toggleTipVote(req.session.user.id, tipId);
   if (!result.ok) return res.status(404).json({ error: result.error });
 
-  res.json({ kudos: kudosFor(await engageModel.getKudos(), user) });
+  const tips = await engageModel.getTips(req.session.user.id);
+  res.json({ tips });
 }
 
-module.exports = { index, createNews, updateNews, deleteNews, vote, giveKudos, deleteKudos };
+// POST /api/engage/posts   body: { texto }
+async function createPost(req, res) {
+  const texto = req.body && req.body.texto;
+  const result = await engageModel.createPost(req.session.user.id, texto);
+  if (!result.ok) return res.status(400).json({ error: result.error });
+
+  const posts = await engageModel.getPosts();
+  res.json({ posts });
+}
+
+// POST /api/engage/posts/:id/comments   body: { texto }
+async function addComment(req, res) {
+  const postId = Number(req.params.id);
+  if (!Number.isInteger(postId)) {
+    return res.status(400).json({ error: "Publicación inválida." });
+  }
+
+  const texto = req.body && req.body.texto;
+  const result = await engageModel.addComment(req.session.user.id, postId, texto);
+  if (!result.ok) return res.status(400).json({ error: result.error });
+
+  const posts = await engageModel.getPosts();
+  res.json({ posts });
+}
+
+// POST /api/engage/announcements   body: { title, text } — solo Administrador
+async function createAnnouncement(req, res) {
+  const title = (req.body && req.body.title) || "";
+  const text = (req.body && req.body.text) || "";
+  if (!title.trim() || !text.trim()) {
+    return res.status(400).json({ error: "Escribe un título y un texto para el anuncio." });
+  }
+  if (title.length > MAX_TITULO) {
+    return res.status(400).json({ error: `El título no puede superar ${MAX_TITULO} caracteres.` });
+  }
+  if (text.length > MAX_TEXTO) {
+    return res.status(400).json({ error: `El texto no puede superar ${MAX_TEXTO} caracteres.` });
+  }
+
+  await engageModel.createNews(req.session.user.id, { title: title.trim(), text: text.trim() });
+
+  const feed = await engageModel.getFeed();
+  res.json({ feed: feedFor(feed, req.session.user) });
+}
+
+// PATCH /api/engage/announcements/:id   body: { title, text } — autor o Administrador
+async function updateAnnouncement(req, res) {
+  const newsId = Number(req.params.id);
+  if (!Number.isInteger(newsId)) {
+    return res.status(400).json({ error: "Anuncio inválido." });
+  }
+
+  const title = (req.body && req.body.title) || "";
+  const text = (req.body && req.body.text) || "";
+  if (!title.trim() || !text.trim()) {
+    return res.status(400).json({ error: "Escribe un título y un texto para el anuncio." });
+  }
+  if (title.length > MAX_TITULO) {
+    return res.status(400).json({ error: `El título no puede superar ${MAX_TITULO} caracteres.` });
+  }
+  if (text.length > MAX_TEXTO) {
+    return res.status(400).json({ error: `El texto no puede superar ${MAX_TEXTO} caracteres.` });
+  }
+
+  const user = req.session.user;
+  const result = await engageModel.updateNews(user.id, isAdmin(user), newsId, { title: title.trim(), text: text.trim() });
+  if (!result.ok) return res.status(403).json({ error: result.error });
+
+  const feed = await engageModel.getFeed();
+  res.json({ feed: feedFor(feed, user) });
+}
+
+// DELETE /api/engage/announcements/:id — autor o Administrador
+async function deleteAnnouncement(req, res) {
+  const newsId = Number(req.params.id);
+  if (!Number.isInteger(newsId)) {
+    return res.status(400).json({ error: "Anuncio inválido." });
+  }
+
+  const user = req.session.user;
+  const result = await engageModel.deleteNews(user.id, isAdmin(user), newsId);
+  if (!result.ok) return res.status(403).json({ error: result.error });
+
+  const feed = await engageModel.getFeed();
+  res.json({ feed: feedFor(feed, user) });
+}
+
+// POST /api/engage/kudos   body: { name, message }
+async function createKudos(req, res) {
+  const name = ((req.body && req.body.name) || "").trim();
+  const message = ((req.body && req.body.message) || "").trim();
+  if (!name) {
+    return res.status(400).json({ error: "Escribe el nombre de quien reconoces." });
+  }
+  if (name.length > MAX_NOMBRE) {
+    return res.status(400).json({ error: `El nombre no puede superar ${MAX_NOMBRE} caracteres.` });
+  }
+  if (message.length > MAX_MENSAJE) {
+    return res.status(400).json({ error: `El mensaje no puede superar ${MAX_MENSAJE} caracteres.` });
+  }
+
+  await engageModel.giveKudos(req.session.user.id, { name, message });
+
+  const kudos = await engageModel.getKudos();
+  res.json({ kudos: kudosFor(kudos, req.session.user) });
+}
+
+// DELETE /api/engage/kudos/:id — quien lo dio o Administrador
+async function removeKudos(req, res) {
+  const kudosId = Number(req.params.id);
+  if (!Number.isInteger(kudosId)) {
+    return res.status(400).json({ error: "Reconocimiento inválido." });
+  }
+
+  const user = req.session.user;
+  const result = await engageModel.deleteKudos(user.id, isAdmin(user), kudosId);
+  if (!result.ok) return res.status(403).json({ error: result.error });
+
+  const kudos = await engageModel.getKudos();
+  res.json({ kudos: kudosFor(kudos, user) });
+}
+
+// POST /api/engage/surveys/:id/vote
+async function vote(req, res) {
+  const surveyId = Number(req.params.id);
+  if (!Number.isInteger(surveyId)) {
+    return res.status(400).json({ error: "Encuesta inválida." });
+  }
+
+  const rawOptionId = req.body && req.body.optionId;
+  const optionId = rawOptionId === undefined || rawOptionId === null ? null : Number(rawOptionId);
+  if (optionId !== null && !Number.isInteger(optionId)) {
+    return res.status(400).json({ error: "Opción inválida." });
+  }
+
+  const result = await engageModel.castVote(req.session.user.id, surveyId, optionId);
+  if (!result.ok) return res.status(409).json({ error: result.error });
+
+  const surveys = await engageModel.getSurveys(req.session.user.id);
+  res.json({ surveys });
+}
+
+module.exports = {
+  index,
+  vote,
+  createPost,
+  addComment,
+  createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+  createKudos,
+  removeKudos,
+  addBirthdayMessage,
+  createTip,
+  voteTip,
+};

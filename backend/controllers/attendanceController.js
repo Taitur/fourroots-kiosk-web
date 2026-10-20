@@ -30,7 +30,7 @@ async function resolveSheetOwner(req, res) {
 }
 
 // Usuario del body o de la query de las rutas de edición (solo administrador). Para escribir en
-// Asistencias el usuario tiene que tener un empleado vinculado (columna iId de kio_tbUsuarios).
+// kio_tbMarcajes el usuario tiene que tener un empleado vinculado (columna iId de kio_tbUsuarios).
 async function resolveTarget(source, res) {
   const userId = toInt(source && source.user);
   const identity = userId && (await attendanceModel.getUserIdentity(userId));
@@ -75,7 +75,7 @@ async function records(req, res) {
 }
 
 // PATCH /api/attendance/records   body: { user, date, type?, overtime? }
-// Cambia el tipo del día y/o sus horas extra (0 a 12, de media en media hora); crea el registro si no existe.
+// Cambia el tipo del día y/o sus horas extra (0 a 12, de cuarto en cuarto de hora); crea el registro si no existe.
 async function saveRecord(req, res) {
   const body = req.body || {};
   if (!isValidIso(body.date)) return res.status(400).json({ error: "Fecha inválida." });
@@ -86,15 +86,20 @@ async function saveRecord(req, res) {
   let overtime;
   if (body.overtime !== undefined) {
     overtime = Number(body.overtime);
-    if (!Number.isFinite(overtime) || overtime < 0 || overtime > attendanceModel.MAX_HORAS_EXTRA || (overtime * 2) % 1 !== 0) {
-      return res.status(400).json({ error: `Las horas extra van de 0 a ${attendanceModel.MAX_HORAS_EXTRA}, de media en media hora.` });
+    if (!Number.isFinite(overtime) || overtime < 0 || overtime > attendanceModel.MAX_HORAS_EXTRA || (overtime * 4) % 1 !== 0) {
+      return res.status(400).json({ error: `Las horas extra van de 0 a ${attendanceModel.MAX_HORAS_EXTRA}, de cuarto en cuarto de hora.` });
     }
   }
   if (type === undefined && !overtime) return res.status(400).json({ error: "Elige un tipo o indica horas extra." });
 
   const identity = await resolveTarget(body, res);
   if (!identity) return;
-  await attendanceModel.setRecord(identity, body.date, { type, overtime });
+  try {
+    await attendanceModel.setRecord(identity, body.date, { type, overtime });
+  } catch (err) {
+    if (err.status === 400) return res.status(400).json({ error: err.message });
+    throw err;
+  }
   res.json({ ok: true });
 }
 

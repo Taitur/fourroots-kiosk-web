@@ -1,7 +1,7 @@
 // Ficha de asistencia: pinta la página con los datos de GET /api/attendance.
 (async function () {
   const { esc } = Portal;
-  const user = await Portal.requireSession();
+  const { user } = await Header.init();
   const isAdmin = user.role === "Administrador";
   const app = document.getElementById("app");
 
@@ -74,23 +74,12 @@
   app.innerHTML = `
 <div class="dash-page">
 
-  <div class="dash-topbar">
-    <a class="dash-brand" style="text-decoration:none;" href="dashboard.html">
-      <div class="dash-brand-mark">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" /></svg>
-      </div>
-      <span class="dash-brand-name">Eslabon</span>
-    </a>
-    <div class="dash-profile">
-      <div class="dash-profile-text">
-        <div class="dash-profile-name">${esc(user.name)}</div>
-        <div class="dash-profile-role">${esc(user.role)}</div>
-      </div>
-      <div class="dash-profile-avatar">${esc(user.initials)}</div>
-    </div>
-  </div>
-
   <div class="dash-wrap">
+
+    <a href="dashboard.html" style="display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:0.85rem; font-weight:600; margin-bottom:18px;">
+      <svg class="ks-icon" viewBox="0 0 24 24" style="width:16px; height:16px;"><path d="M15 18l-6-6 6-6"/></svg>
+      Volver al Dashboard
+    </a>
 
     <div class="dash-hero">
       <div class="dash-eyebrow">Ficha de asistencia · Recursos Humanos</div>
@@ -278,7 +267,7 @@
       rows += `<tr data-date="${iso}">
           <td class="adm-day">${d}<span>${weekdays[new Date(year, month - 1, d).getDay()]}</span></td>
           <td><select class="adm-type">${options.join("")}</select></td>
-          <td><input type="number" class="adm-hours" min="0" max="12" step="0.5" value="${record.overtime || 0}" aria-label="Horas extra del día ${d}"></td>
+          <td><input type="number" class="adm-hours" min="0" max="12" step="0.25" value="${record.overtime || 0}" aria-label="Horas extra del día ${d}"></td>
           <td class="adm-actions">
             <button type="button" class="adm-btn adm-btn-primary" data-save>Guardar</button>
             <button type="button" class="adm-btn" data-remove${current ? "" : " disabled"}>Quitar</button>

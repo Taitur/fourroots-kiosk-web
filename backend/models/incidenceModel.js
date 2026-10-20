@@ -247,8 +247,119 @@ async function cancelRequest(userId, requestId) {
   return { ok: true };
 }
 
+// ---- administración (aprobar/rechazar) — solo Administrador ----
+
+// Todas las solicitudes de permisos "en proceso", de cualquier usuario.
+async function getPendingRequests() {
+  const pool = await getConnection();
+  const result = await pool
+    .request()
+    .input("solicitud", sql.Int, SOLICITUD_PERMISOS)
+    .input("enProceso", sql.TinyInt, ESTATUS_EN_PROCESO)
+    .query(`
+      SELECT su.iIdSolicitudUsuario AS id, su.iIdUsuario AS usuarioId,
+             CONVERT(varchar(10), su.dtFechaRegistro, 23) AS registro,
+             a.id_evento AS tipo,
+             CONVERT(varchar(10), MIN(a.fecha_aplicacion), 23) AS inicio,
+             CONVERT(varchar(10), MAX(a.fecha_aplicacion), 23) AS fin,
+             COUNT(*) AS dias,
+             SUM(a.solicitado_horas) AS horas,
+             CONVERT(varchar(5), MIN(a.inicio), 108) AS horaInicio,
+             CONVERT(varchar(5), MAX(a.fin), 108) AS horaFin,
+             u.vcUsuario AS username,
+             r.nombre, r.paterno, r.materno,
+             (SELECT TOP 1 e.vcDescripcion FROM kio_tbEventosSolAvisos e
+              WHERE e.iIdSolicitudUsuario = su.iIdSolicitudUsuario) AS comentario
+      FROM kio_tbSolicitudesUsuarios su
+      JOIN kio_tbAvisosMultiples a ON a.iidsolicitudusuario = su.iIdSolicitudUsuario
+      JOIN kio_tbUsuarios u ON u.iIdUsuario = su.iIdUsuario
+      LEFT JOIN recursos r ON r.id = u.iId
+      WHERE su.iIdSolicitud = @solicitud AND su.tiEstatus = @enProceso
+      GROUP BY su.iIdSolicitudUsuario, su.iIdUsuario, su.dtFechaRegistro, a.id_evento,
+               u.vcUsuario, r.nombre, r.paterno, r.materno
+      ORDER BY su.iIdSolicitudUsuario DESC`);
+
+  return result.recordset.map((r) => {
+    const type = getType(r.tipo);
+    const byHours = type && type.mode === "hours";
+    return {
+      id: r.id,
+      usuarioId: r.usuarioId,
+      empleado: [r.nombre, r.paterno, r.materno].filter(Boolean).join(" ").trim() || r.username,
+      registro: r.registro,
+      tipo: r.tipo,
+      tipoNombre: type ? type.label : "Permiso",
+      inicio: r.inicio,
+      fin: r.fin,
+      dias: r.dias,
+      horas: r.horas,
+      horaInicio: byHours ? r.horaInicio : null,
+      horaFin: byHours ? r.horaFin : null,
+      comentario: r.comentario || "",
+    };
+  });
+}
+
+// Datos básicos de una solicitud (para notificar al usuario cuando se aprueba/rechaza).
+async function getRequestInfo(id) {
+  const pool = await getConnection();
+  const result = await pool
+    .request()
+    .input("id", sql.Int, id)
+    .input("solicitud", sql.Int, SOLICITUD_PERMISOS)
+    .query(`
+      SELECT su.iIdUsuario AS usuarioId, a.id_evento AS tipo,
+             CONVERT(varchar(10), MIN(a.fecha_aplicacion), 23) AS inicio,
+             CONVERT(varchar(10), MAX(a.fecha_aplicacion), 23) AS fin
+      FROM kio_tbSolicitudesUsuarios su
+      JOIN kio_tbAvisosMultiples a ON a.iidsolicitudusuario = su.iIdSolicitudUsuario
+      WHERE su.iIdSolicitudUsuario = @id AND su.iIdSolicitud = @solicitud
+      GROUP BY su.iIdUsuario, a.id_evento`);
+
+  const row = result.recordset[0];
+  if (!row) return null;
+  const type = getType(row.tipo);
+  return { usuarioId: row.usuarioId, inicio: row.inicio, fin: row.fin, tipoNombre: type ? type.label : "Permiso" };
+}
+
+// Cambia el estatus de una solicitud que siga "En proceso" (aprobar o rechazar). Devuelve { ok, error? }.
+async function setRequestStatus(id, estatus) {
+  const pool = await getConnection();
+  const tx = new sql.Transaction(pool);
+  await tx.begin();
+  try {
+    const updated = await new sql.Request(tx)
+      .input("id", sql.Int, id)
+      .input("solicitud", sql.Int, SOLICITUD_PERMISOS)
+      .input("estatus", sql.TinyInt, estatus)
+      .input("enProceso", sql.TinyInt, ESTATUS_EN_PROCESO)
+      .query(`
+        UPDATE kio_tbSolicitudesUsuarios SET tiEstatus = @estatus, dtFechaModificacion = GETDATE()
+        WHERE iIdSolicitudUsuario = @id AND iIdSolicitud = @solicitud AND tiEstatus = @enProceso`);
+
+    if (updated.rowsAffected[0] === 0) {
+      await tx.rollback();
+      return { ok: false, error: "Solicitud no encontrada o ya no está en proceso." };
+    }
+
+    await new sql.Request(tx)
+      .input("id", sql.Int, id)
+      .input("estatus", sql.Int, estatus)
+      .query(`
+        UPDATE kio_tbAvisosMultiples SET estatus = @estatus, fecha_modificacion = GETDATE()
+        WHERE iidsolicitudusuario = @id`);
+
+    await tx.commit();
+  } catch (err) {
+    await tx.rollback().catch(() => {});
+    throw err;
+  }
+  return { ok: true };
+}
+
 module.exports = {
   getRequests, createRequest, cancelRequest,
+  getPendingRequests, setRequestStatus, getRequestInfo,
   ESTATUS_CANCELADA, ESTATUS_ACEPTADA, ESTATUS_EN_PROCESO, MAX_COMENTARIO,
   MAX_DIAS_ATRAS, MAX_DIAS_ADELANTE, MAX_DIAS_RANGO,
 };

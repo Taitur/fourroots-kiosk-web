@@ -8,6 +8,7 @@ const DIAS_ASIGNADOS = 15;
 // Catálogos del sistema original.
 const SOLICITUD_VACACIONES = 1; // kio_tbSolicitudes: "Vacaciones"
 const ESTATUS_CANCELADA = 1; // KIO_TBESTATUSSOLICITUDES
+const ESTATUS_ACEPTADA = 2;
 const ESTATUS_EN_PROCESO = 3;
 // Clave de movimiento de vacaciones en nómina (columna obligatoria, sin catálogo en la BD).
 // Se usa 1, el mismo valor que ya tienen las solicitudes existentes.
@@ -203,4 +204,79 @@ async function createRequest(user, rawDays, today = toIsoDate(new Date())) {
   return { ok: true, solicitudes: blocks };
 }
 
-module.exports = { getSummary, createRequest, DIAS_ASIGNADOS };
+// ---- administración (aprobar/rechazar) — solo Administrador ----
+
+// Todas las solicitudes de vacaciones "en proceso", de cualquier usuario.
+async function getPendingRequests() {
+  const pool = await getConnection();
+  const result = await pool
+    .request()
+    .input("solicitud", sql.Int, SOLICITUD_VACACIONES)
+    .input("enProceso", sql.TinyInt, ESTATUS_EN_PROCESO)
+    .query(`
+      SELECT DISTINCT su.iIdSolicitudUsuario AS id, su.iIdUsuario AS usuarioId,
+             CONVERT(varchar(10), su.dtFechaRegistro, 23) AS registro,
+             CONVERT(varchar(10), v.dtFechaInicio, 23) AS inicio,
+             CONVERT(varchar(10), ISNULL(v.dtFechaFin, v.dtFechaInicio), 23) AS fin,
+             ISNULL(v.iDias, 0) AS dias,
+             u.vcUsuario AS username,
+             r.nombre, r.paterno, r.materno
+      FROM kio_tbSolicitudesUsuarios su
+      JOIN kio_tbSolVacaciones v ON v.iIdSolicitudUsuario = su.iIdSolicitudUsuario
+      JOIN kio_tbUsuarios u ON u.iIdUsuario = su.iIdUsuario
+      LEFT JOIN recursos r ON r.id = u.iId
+      WHERE su.iIdSolicitud = @solicitud AND su.tiEstatus = @enProceso
+      ORDER BY su.iIdSolicitudUsuario`);
+
+  return result.recordset.map((row) => ({
+    id: row.id,
+    usuarioId: row.usuarioId,
+    registro: row.registro,
+    inicio: row.inicio,
+    fin: row.fin,
+    dias: row.dias,
+    empleado: [row.nombre, row.paterno, row.materno].filter(Boolean).join(" ").trim() || row.username,
+  }));
+}
+
+// Datos básicos de una solicitud (para notificar al usuario cuando se aprueba/rechaza).
+async function getRequestInfo(id) {
+  const pool = await getConnection();
+  const result = await pool
+    .request()
+    .input("id", sql.Int, id)
+    .input("solicitud", sql.Int, SOLICITUD_VACACIONES)
+    .query(`
+      SELECT DISTINCT su.iIdUsuario AS usuarioId,
+             CONVERT(varchar(10), v.dtFechaInicio, 23) AS inicio,
+             CONVERT(varchar(10), ISNULL(v.dtFechaFin, v.dtFechaInicio), 23) AS fin,
+             ISNULL(v.iDias, 0) AS dias
+      FROM kio_tbSolicitudesUsuarios su
+      JOIN kio_tbSolVacaciones v ON v.iIdSolicitudUsuario = su.iIdSolicitudUsuario
+      WHERE su.iIdSolicitudUsuario = @id AND su.iIdSolicitud = @solicitud`);
+
+  return result.recordset[0] || null;
+}
+
+// Cambia el estatus de una solicitud que siga "En proceso" (aprobar o rechazar). Devuelve { ok, error? }.
+async function setRequestStatus(id, estatus) {
+  const pool = await getConnection();
+  const result = await pool
+    .request()
+    .input("id", sql.Int, id)
+    .input("solicitud", sql.Int, SOLICITUD_VACACIONES)
+    .input("estatus", sql.TinyInt, estatus)
+    .input("enProceso", sql.TinyInt, ESTATUS_EN_PROCESO)
+    .query(`
+      UPDATE kio_tbSolicitudesUsuarios SET tiEstatus = @estatus, dtFechaModificacion = GETDATE()
+      WHERE iIdSolicitudUsuario = @id AND iIdSolicitud = @solicitud AND tiEstatus = @enProceso`);
+
+  if (result.rowsAffected[0] === 0) return { ok: false, error: "Solicitud no encontrada o ya no está en proceso." };
+  return { ok: true };
+}
+
+module.exports = {
+  getSummary, createRequest, DIAS_ASIGNADOS,
+  getPendingRequests, setRequestStatus, getRequestInfo,
+  ESTATUS_CANCELADA, ESTATUS_ACEPTADA, ESTATUS_EN_PROCESO,
+};

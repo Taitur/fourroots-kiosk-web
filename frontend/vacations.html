@@ -4,12 +4,83 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Solicitar Vacaciones</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" />
+<link rel="stylesheet" href="css/styles.css" />
 <link rel="stylesheet" href="css/vacations.css" />
+<link rel="stylesheet" href="css/incidences.css" />
 <link rel="stylesheet" href="css/theme.css" />
 <script src="js/theme-init.js"></script>
 <script src="js/guard-init.js"></script>
 </head>
 <body>
+  <header class="header" data-no-read>
+    <div class="header-inner">
+      <div class="brand">
+        <span class="box"><span class="material-symbols-outlined" style="font-size:17px; color:#fff;">bolt</span></span>
+        <span class="name">Eslabon</span>
+      </div>
+      <div class="header-right">
+        <button class="icon-btn" id="narrateBtn" type="button" title="Leer la página en voz alta" aria-label="Leer la página en voz alta" aria-pressed="false"><span class="material-symbols-outlined" id="narrateIcon" style="font-size:18px;">volume_off</span></button>
+
+        <div class="dropdown-wrap">
+          <button class="icon-btn" id="themeBtn" type="button" title="Personalizar colores" aria-label="Personalizar colores" aria-haspopup="true" aria-expanded="false" aria-controls="themePanel"><span class="material-symbols-outlined" style="font-size:18px;">palette</span></button>
+          <div class="dropdown-panel theme-panel" id="themePanel" role="dialog" aria-label="Personalizar portal">
+            <div class="dropdown-head"><p style="font-size:15px;">Personalizar portal</p><span style="font-size:13px;">Selecciona un tema de color</span></div>
+            <div class="panel-section">
+              <p class="panel-section-title">Temas</p>
+              <div class="theme-swatches" id="themeSwatches"></div>
+              <p class="panel-section-title">Accesibilidad · Daltonismo</p>
+              <div class="theme-cb-list" id="themeCbList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dropdown-wrap">
+          <button class="icon-btn" id="appsBtn" type="button" title="Navegar entre aplicaciones" aria-label="Navegar entre aplicaciones" aria-haspopup="true" aria-expanded="false" aria-controls="appsPanel"><span class="material-symbols-outlined" style="font-size:18px;">space_dashboard</span></button>
+          <div class="dropdown-panel apps-panel" id="appsPanel" role="dialog" aria-label="Aplicaciones">
+            <div class="dropdown-head apps-panel-head">
+              <p style="font-size:15px;">Aplicaciones</p>
+              <button class="apps-panel-close" id="appsClose" type="button" aria-label="Cerrar"><span class="material-symbols-outlined" style="font-size:20px;">close</span></button>
+            </div>
+            <div class="apps-panel-body" id="appsBody"></div>
+          </div>
+        </div>
+        <div class="divider"></div>
+
+        <div class="dropdown-wrap">
+          <button class="icon-btn" id="bellBtn" type="button" title="Notificaciones" aria-haspopup="true" aria-expanded="false">
+            <span class="material-symbols-outlined" style="font-size:18px;">notifications</span>
+            <span class="badge-dot" id="bellBadge" style="display:none;"></span>
+          </button>
+          <div class="dropdown-panel" id="bellPanel">
+            <div class="dropdown-head" style="display:flex; align-items:center; justify-content:space-between;">
+              <div><p>Notificaciones</p><span id="unreadLabel"></span></div>
+              <a href="#" id="markAllRead" style="font-size:12px; font-weight:600;">Marcar leídas</a>
+            </div>
+            <div id="notifList"></div>
+          </div>
+        </div>
+
+        <div class="dropdown-wrap">
+          <button class="user-block" id="avatarBtn" type="button" aria-haspopup="true" aria-expanded="false">
+            <span class="avatar" id="userInitials"></span>
+            <canvas class="avatar" id="userAvatarCanvas" width="36" height="36" style="display:none;"></canvas>
+            <span>
+              <p class="name" id="userName"></p>
+              <p class="role" id="userRole"></p>
+            </span>
+            <span class="material-symbols-outlined" style="font-size:16px; color:#6B7280;">expand_more</span>
+          </button>
+          <div class="dropdown-panel" id="userPanel" style="width:220px;">
+            <a class="item" style="text-decoration:none; color:inherit;" href="avatar.html"><span class="material-symbols-outlined" style="font-size:18px;">person</span> Mi perfil</a>
+            <div class="item" id="userNotifItem"><span class="material-symbols-outlined" style="font-size:18px;">notifications_active</span> Notificaciones</div>
+            <a class="item" id="logoutLink" style="color:var(--tema-error); text-decoration:none;" href="login.html"><span class="material-symbols-outlined" style="font-size:18px;">logout</span> Cerrar sesión</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
 
 <div class="page-container">
 
@@ -18,10 +89,10 @@
     Volver al Dashboard
   </a>
 
-  <h1 class="page-title">Solicitar<br>Vacaciones</h1>
-  <p class="ks-vac-lead">Selecciona los días que deseas tomar como vacaciones.</p>
+  <h1 class="page-title" id="vacPageTitle">Solicitar<br>Vacaciones</h1>
+  <p class="ks-vac-lead" id="vacPageLead">Selecciona los días que deseas tomar como vacaciones.</p>
 
-  <div class="ks-vac-stats">
+  <div class="ks-vac-stats" id="vacStatsBox">
     <div class="ks-vac-stat">
       <div class="ks-vac-stat-num" data-summary="disponibles">–</div>
       <div class="ks-vac-stat-label">Días disponibles</div>
@@ -36,7 +107,7 @@
     </div>
   </div>
 
-  <div class="ks-vac-grid">
+  <div class="ks-vac-grid" id="vacGrid">
 
     <!-- Calendario -->
     <div class="card-ks ks-cal-card">
@@ -120,10 +191,26 @@
 
   </div>
 
+  <div class="card-ks ks-vac-side-card" id="vacAdminCard" hidden style="margin-top:18px;">
+    <div class="ks-vac-side-head">
+      <div class="ks-vac-side-icon">
+        <svg class="ks-icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+      </div>
+      <div>
+        <div class="ks-vac-side-title">Solicitudes pendientes (Administrador)</div>
+        <div class="ks-vac-side-subtitle">Aprueba o rechaza las solicitudes de vacaciones de tu equipo</div>
+      </div>
+    </div>
+    <div id="vacAdminList"></div>
+  </div>
+
 </div>
 
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
+<script src="js/avatar-draw.js"></script>
+<script src="js/header.js"></script>
 <script src="js/vacations.js"></script>
+<script src="js/portal-tools.js"></script>
 </body>
 </html>
