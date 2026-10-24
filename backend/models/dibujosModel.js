@@ -3,13 +3,13 @@ const { sql, getConnection } = require('../db');
 // ---- Nombres de tablas y columnas del videojuego de dibujos (ajústalos si cambian) ----
 const T_DIBUJO = 'Juego_ConectArte';          // dibujos: Id_dibujo, Id_jugador, Id_prompt, puntos_*, img_dibujo
 const T_JUGADOR_PUNTOS = 'JugadorPuntos';     // jugadores: Id_jugador, PuntosJugador (total de todos los juegos)
-const T_PROMPT = 'Tabla_prompt';              // palabras: Id_prompt, Nombre_prompt
+const T_PROMPT = 'Prompts_ConectArte';        // palabras: Id_prompt, Nombre_Prompt
 const SP_DIBUJO_ALEATORIO = 'dbo.usp_DibujoAleatorio';
 
 // Columna de la tabla de dibujos que guarda cada tipo de puntos
 const COLUMNA_PUNTOS = {
   adivinar: 'puntos_por_adivinar',
-  calificacion: 'puntos_por_calificacion',
+  calificacion: 'puntos_por_calificar',
 };
 
 // Un prompt (palabra) al azar para la escena de dibujar
@@ -32,7 +32,7 @@ async function guardarDibujo({ idJugador, idPrompt, png }) {
     .input('prompt', sql.Int, idPrompt)
     .input('img', sql.VarBinary(sql.MAX), png)
     .query(`
-      INSERT INTO ${T_DIBUJO} (Id_dibujo, Id_jugador, Id_prompt, puntos_por_adivinar, puntos_por_calificacion, img_dibujo)
+      INSERT INTO ${T_DIBUJO} (Id_dibujo, Id_jugador, Id_prompt, puntos_por_adivinar, puntos_por_calificar, img_dibujo)
       OUTPUT INSERTED.Id_dibujo AS id_dibujo
       VALUES ((SELECT ISNULL(MAX(Id_dibujo), 0) + 1 FROM ${T_DIBUJO} WITH (UPDLOCK, HOLDLOCK)),
               @jugador, @prompt, 0, 0, @img)`);
