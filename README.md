@@ -7,16 +7,38 @@ backend/    API REST (Node.js + Express + SQL Server). Responde solo JSON.
 frontend/   Páginas estáticas (HTML + CSS + JS). Consumen el API; no necesitan Node para servirse.
 ```
 
-## Desarrollo local
+## Cómo ejecutar el proyecto (local)
+
+Todo se corre en local; no hace falta alojar la API en ningún dominio.
+
+### Requisitos
+- Node.js 18 o superior.
+- Acceso a una base de datos SQL Server (local o remota) con los datos del Kiosco.
+
+### Pasos
 
 ```bash
 cd backend
 npm install
-cp .env.example .env     # completa DB_* (y PORT si quieres)
-npm run dev              # nodemon; con `npm start` corre sin recarga
+cp .env.example .env     # completa DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 ```
 
-Abre http://localhost:3000. Por defecto el backend **también sirve la carpeta `frontend/`**, así que no hace falta nada más.
+Edita `.env` y, para desarrollo local, deja (o ajusta):
+
+```
+PORT=3000
+NODE_ENV=development
+SERVE_FRONTEND=true
+```
+
+Luego levanta el servidor:
+
+```bash
+npm run dev     # o: npm start (ambos usan nodemon, con recarga automática)
+```
+
+Abre http://localhost:3000 en el navegador. Por defecto el backend **también sirve la carpeta `frontend/`**,
+así que con un solo comando tienes API y páginas funcionando — no es necesario levantar un servidor aparte para el frontend.
 Cualquier página protegida sin sesión redirige a `login.html`.
 
 ## Estructura
@@ -71,37 +93,7 @@ Los errores siempre son `{ "error": "mensaje" }` con el código HTTP correspondi
 Variables de entorno (ver `backend/.env.example`): `DB_*`, `PORT`, `NODE_ENV=production`,
 `SESSION_SECRET` (**obligatoria en producción**), `TRUST_PROXY`, `SERVE_FRONTEND`, `CORS_ORIGIN`, `COOKIE_SAMESITE`.
 
-### A) Un solo servidor (lo más simple)
+### Un solo servidor (lo más simple)
 El backend sirve el frontend. Arranca con `NODE_ENV=production npm start` (idealmente con pm2 o systemd) y,
 si pones Nginx delante, haz proxy de todo a `127.0.0.1:PORT` con `TRUST_PROXY=1`. `frontend/js/config.js` se queda con `API_BASE: ""`.
 
-### B) API aparte, frontend estático en el mismo dominio (recomendado con Nginx)
-Backend con `SERVE_FRONTEND=false` y `TRUST_PROXY=1`; Nginx sirve `frontend/` y reenvía `/api` al backend.
-`API_BASE` sigue siendo `""` (mismo origen, no hace falta CORS):
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name kiosko.midominio.com;
-
-    root /var/www/kiosko/frontend;
-    index index.html;
-
-    location /api/ {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location / { try_files $uri $uri.html $uri/ =404; }
-}
-```
-
-### C) API y frontend en dominios distintos
-En el frontend: `API_BASE: "https://api.midominio.com"`. En el backend: `SERVE_FRONTEND=false`,
-`CORS_ORIGIN=https://app.midominio.com` y, si los dominios no comparten el mismo sitio, `COOKIE_SAMESITE=none` (exige HTTPS).
-
-### Notas para producción
-- Las sesiones se guardan **en memoria**: se pierden al reiniciar y solo sirven con una instancia. Para varias instancias, cambia el store de `express-session` (Redis o SQL Server).
-- `helpers/password.js` está pendiente de implementar el cifrado del sistema original.
-- El inicio de sesión no tiene límite de intentos; conviene añadirlo (p. ej. `express-rate-limit`) antes de publicar.
